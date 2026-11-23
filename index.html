@@ -509,7 +509,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "14 · 23 nov. 17 h 40";
+const APP_VERSION = "15 · 23 nov. 17 h 40";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -660,7 +660,7 @@ const render = {
     const sc = currentScreen(), r = screenAdvice(b.sTop, b.sDist, sc.h), dc = distClass(b.sDist), rel = reliability();
     const howTxt = r.dir > 0 ? (sc.ext ? "Tirez l'écran vers le haut sur son pied, ou ajoutez un réhausseur." : "Posez le MacBook sur un support + clavier et souris externes.")
                  : r.dir < 0 ? (sc.ext ? "Descendez l'écran sur son pied ou retirez le réhausseur." : "Baissez le support du MacBook.") : "";
-    const confirmFirst = b.mode === "camera" ? !rel.agree : (rel.n < 2 || !rel.agree);
+    const confirmFirst = !rel.agree;
     // Suivi en direct : dès qu'il faut bouger l'écran, le chiffre et le schéma suivent ses mouvements
     const live = r.dir !== 0 && S.running;
     const dotMode = b.mode === "regard" && b.kHead != null;
@@ -1144,11 +1144,8 @@ function guideDone(top, D){
 /* ================= Fiabilité : plusieurs mesures, valeur médiane ================= */
 function recentSeries(){ const k = currentScreen().key; return (S.series[k] || []).filter(x => Date.now() - x.at < 45*60e3); }
 function addToSeries(key, one){
-  let ser = (S.series[key] || []).filter(x => Date.now() - x.at < 45*60e3);
-  // Si l'écran a bougé depuis la mesure précédente (plus de 3 cm d'écart), on repart de zéro :
-  // la nouvelle position ne doit pas être noyée dans la moyenne des anciennes.
-  const last = ser[ser.length-1];
-  if(last){ const d = one.sDist || last.sDist; const moved = Math.abs(d*(Math.tan(one.sTop*RAD) - Math.tan(last.sTop*RAD))); if(moved > 3) ser = []; }
+  // Chaque nouvelle mesure remplace la précédente : aucune moyenne avec d'anciennes positions de l'écran
+  const ser = [];
   ser.push({sTop:one.sTop, sDist:one.sDist, err:one.err, doubt:one.doubt, at:Date.now()});
   S.series[key] = ser.slice(-5); store.set("nd5_series", S.series);
   const s = S.series[key];
