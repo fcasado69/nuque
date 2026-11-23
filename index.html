@@ -44,6 +44,8 @@ h3{font-family:var(--f-display);font-weight:700;font-size:1.05rem;margin:0}
 .steps{display:flex;gap:6px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
 .steps li{font-size:.82rem;padding:5px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);display:flex;gap:6px;align-items:center}
 .steps li b{font-family:var(--f-mono);font-weight:500}
+.steps li{cursor:pointer;transition:background .15s,border-color .15s}
+.steps li:hover:not(.on){border-color:var(--accent);color:var(--ink)}
 .steps li.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .steps li.done{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
 .tool{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:6px 12px;border-radius:999px}
@@ -462,7 +464,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "7 · 23 nov. 17 h 15";
+const APP_VERSION = "8 · 23 nov. 17 h 20";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -492,6 +494,24 @@ function sizeStage(){
   $("#camSizeP").setAttribute("d", mini ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6");
 }
 $("#camSize").onclick = ()=>{ S.prefs.camMini = !document.querySelector(".stage").classList.contains("mini"); savePrefs(); sizeStage(); };
+/* Étapes 1 à 4 cliquables : accès direct */
+document.querySelectorAll("#steps li").forEach(li=>{
+  li.tabIndex = 0; li.setAttribute("role", "button");
+  const open = async ()=>{
+    if(S.busy) return;                                   // pas pendant une mesure en cours
+    const k = li.dataset.s, b = curBase();
+    if(k === "prep") return go("prep");
+    if(k === "measure"){ unlockAudio(); if(await startCamera()) go("measure"); return; }
+    if(k === "result") return b ? go("result") : (await startCamera()) && go("measure");
+    if(k === "watch"){
+      if(S.watching) return go("watch");
+      unlockAudio();
+      if(!(await startCamera())) return;
+      return b ? startWatch() : go("measure");
+    }
+  };
+  li.onclick = open; li.onkeydown = e=>{ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); open(); } };
+});
 $("#tHist").onclick = ()=> S.view==="history" ? go(S.step) : go("history");
 $("#tDesk").onclick = ()=> S.view==="desk" ? go(S.step) : go("desk");
 $("#tSet").onclick = ()=> S.view==="settings" ? go(S.step) : go("settings");
