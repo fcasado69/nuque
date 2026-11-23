@@ -144,6 +144,14 @@ a{color:var(--accent)}
 .cal-dot{position:absolute;left:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#5FE0C6;animation:pulse 1.1s ease-in-out infinite}
 .cal-dot::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#0B1110}
 @keyframes pulse{50%{transform:scale(.75)}}
+.cal-arrow{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;color:#FFD24D;font-weight:800;font-size:1.2rem;pointer-events:none}
+.cal-arrow svg{width:70px;height:94px;fill:none;stroke:currentColor;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 12px rgba(255,210,77,.55))}
+.cal-arrow.up{top:12px;left:50%;transform:translateX(-50%)} .cal-arrow.up svg{animation:aUp 1s ease-in-out infinite}
+.cal-arrow.down{bottom:12px;left:50%;transform:translateX(-50%);flex-direction:column-reverse} .cal-arrow.down svg{transform:rotate(180deg);animation:aDown 1s ease-in-out infinite}
+.cal-arrow.left{left:12px;top:50%;transform:translateY(-50%);flex-direction:row} .cal-arrow.left svg{transform:rotate(-90deg);animation:aLeft 1s ease-in-out infinite}
+.cal-arrow.right{right:12px;top:50%;transform:translateY(-50%);flex-direction:row-reverse} .cal-arrow.right svg{transform:rotate(90deg);animation:aRight 1s ease-in-out infinite}
+@keyframes aUp{50%{transform:translateY(-10px)}} @keyframes aDown{50%{transform:rotate(180deg) translateY(-10px)}}
+@keyframes aLeft{50%{transform:rotate(-90deg) translateY(-10px)}} @keyframes aRight{50%{transform:rotate(90deg) translateY(-10px)}}
 .cal-skip{position:absolute;right:16px;bottom:16px;background:transparent;color:#9FB4AE;border-color:#33463F}
 .q{font-weight:600;margin:0 0 8px}
 .set{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
@@ -401,6 +409,8 @@ body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
 <div class="cal" id="cal" hidden>
   <div class="cal-msg" id="calMsg"><svg><use id="calIco" href="#i-horizon"/></svg><div class="t" id="calT"></div><div class="s" id="calS"></div><div class="n" id="calN"></div></div>
   <div class="cal-dot" id="calDot" hidden></div>
+  <div class="cal-arrow" id="calArrow" hidden><svg viewBox="0 0 60 80" aria-hidden="true"><path d="M30 76V10M8 32L30 8l22 24"/></svg><span>La caméra est ici</span></div>
+  <div class="cal-arrow" id="calArrow2" hidden><svg viewBox="0 0 60 80" aria-hidden="true"><path d="M30 76V10M8 32L30 8l22 24"/></svg><span>ou ici</span></div>
   <button class="cal-skip" id="calStop">Annuler</button>
 </div>
 
@@ -509,7 +519,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "15 · 23 nov. 17 h 40";
+const APP_VERSION = "16 · 23 nov. 17 h 45";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -921,6 +931,20 @@ const wait = ms => new Promise(r=>setTimeout(r, ms));
 const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
 const median = a => { const s = [...a].sort((x,y)=>x-y), k = s.length>>1; return s.length%2 ? s[k] : (s[k-1]+s[k])/2; };
 function std(a){ const m=mean(a); return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length); }
+// Flèche qui montre où se trouve la caméra à regarder
+function calArrow(cam){
+  const a = $("#calArrow"), a2 = $("#calArrow2"); a2.hidden = true;
+  if(!cam){ a.hidden = true; return; }
+  let dir = cam === "top" ? "up" : cam === "below" ? "down" : null;
+  if(!dir){
+    // MacBook à côté : l'écran principal (souvent le MacBook) est à gauche si cet écran commence plus à droite
+    const L = screen.availLeft ?? screen.left;
+    if(L > 0) dir = "left"; else if(L < 0) dir = "right";
+    else { dir = "left"; a2.className = "cal-arrow right"; a2.hidden = false; }
+  }
+  a.className = "cal-arrow " + dir; a.hidden = false;
+  a.querySelector("span").textContent = cam === "top" ? "La caméra est ici, en haut de l'écran" : cam === "below" ? "Caméra du MacBook, en dessous" : (a2.hidden ? "Caméra du MacBook, de ce côté" : "Caméra du MacBook : de ce côté");
+}
 function calMsg(icon, t, s, n){ $("#calMsg").hidden = false; $("#calDot").hidden = true; $("#calIco").setAttribute("href","#"+icon); $("#calT").textContent = t; $("#calS").textContent = s||""; $("#calN").textContent = n ?? ""; }
 function dotFraction(el){
   const r = el.getBoundingClientRect(), cy = r.top + r.height/2;
@@ -940,7 +964,7 @@ async function lookAt(fy){
   const s = summarize(await grab(2000)); beep(880,.08,true);
   return s && {...s, fy:real};
 }
-function endCal(){ $("#cal").hidden = true; cal.active = false; S.busy = false; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+function endCal(){ try{ calArrow(null); }catch(e){} $("#cal").hidden = true; cal.active = false; S.busy = false; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
 function fail(msg){ endCal(); const m = $("#msg"); if(m){ m.textContent = msg; m.style.color = "var(--bad)"; } const g = $("#go"); if(g){ g.disabled = false; g.textContent = "Recommencer"; } }
 
 async function runCalibration(){
@@ -956,9 +980,10 @@ async function runCalibration(){
   let K = null, camBelowK = null;
   {
     const where = st.cam === "top" ? "Le petit point noir en haut de cet écran." : `Le petit point noir au-dessus de l'écran du MacBook, ${st.cam === "below" ? "en dessous de cet écran" : "à côté de cet écran"}.`;
-    for(let i=3;i>0;i--){ calMsg("i-cam", "1/4 · Regardez la caméra", where, i); await wait(1000); if(S.cancel) return fail("Mesure annulée."); }
-    calMsg("i-cam", "Fixez la caméra… ne bougez plus", "", "●");
-    K = summarize(await grab(2500)); beep(660,.1,true);
+    calArrow(st.cam);
+    for(let i=3;i>0;i--){ calMsg("i-cam", "1/4 · Regardez la caméra", where + " Suivez la flèche jaune.", i); await wait(1000); if(S.cancel){ calArrow(null); return fail("Mesure annulée."); } }
+    calMsg("i-cam", "Fixez la caméra… ne bougez plus", "Les yeux sur l'objectif, pas sur cet écran.", "●");
+    K = summarize(await grab(2500)); beep(660,.1,true); calArrow(null);
     if(!K) return fail("Visage pas assez visible en regardant la caméra. Recommencez.");
     // Angle de la caméra sous l'horizontale = inclinaison de son écran − élévation de l'œil dans l'image
     camBelowK = th - elev(avgV(K.sm, "c"));
