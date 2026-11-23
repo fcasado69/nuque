@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nuque Droite</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0E7566">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout : caméra à gauche, carte d'action à droite. Pictogrammes plutôt que texte. Calibration plein écran avec un rond. */
+:root{
+  --bg:#EDF1F0; --surface:#FFFFFF; --sunk:#E3E9E7; --ink:#15201E; --muted:#56665F; --line:#CFD9D6;
+  --accent:#0E7566; --accent-ink:#FFFFFF; --good:#1D8648; --warn:#B9730A; --bad:#C2410C; --pain:#7A4FB5;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Inter", -apple-system, system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1514; --surface:#162120; --sunk:#111A19; --ink:#E4EDEA; --muted:#93A6A0; --line:#28403B;
+  --accent:#3CBFA8; --accent-ink:#06201B; --good:#4CC47E; --warn:#E6A83A; --bad:#F2733F; --pain:#B392E8; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0E1514; --surface:#162120; --sunk:#111A19; --ink:#E4EDEA; --muted:#93A6A0; --line:#28403B;
+  --accent:#3CBFA8; --accent-ink:#06201B; --good:#4CC47E; --warn:#E6A83A; --bad:#F2733F; --pain:#B392E8; color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:.9375rem;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:800;font-size:1.8rem;letter-spacing:-.02em;margin:0}
+h1 span{color:var(--accent)}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.5rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h3{font-family:var(--f-display);font-weight:700;font-size:1.05rem;margin:0}
+.muted{color:var(--muted)}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+
+.steps{display:flex;gap:6px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
+.steps li{font-size:.82rem;padding:5px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);display:flex;gap:6px;align-items:center}
+.steps li b{font-family:var(--f-mono);font-weight:500}
+.steps li.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.steps li.done{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.tool{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:6px 12px;border-radius:999px}
+.tool svg{width:18px;height:18px;color:var(--accent)}
+.tool.on{background:var(--ink);color:var(--bg);border-color:var(--ink)} .tool.on svg{color:var(--bg)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.stage{position:relative;background:#0B1110;border-radius:16px;overflow:hidden;aspect-ratio:4/3;max-width:100%}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);max-width:none}
+.ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#B9C9C4;text-align:center;padding:24px}
+.badge{position:absolute;top:12px;left:12px;font-size:.75rem;padding:4px 10px;border-radius:999px;background:rgba(8,14,13,.75);color:#E8F0ED;display:flex;gap:6px;align-items:center}
+.enh{position:absolute;top:12px;right:12px;font-size:.75rem;padding:4px 10px;border-radius:999px;background:rgba(95,224,198,.92);color:#06201B;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:#7A8B86}
+.dot.good{background:#4CC47E}.dot.warn{background:#E6A83A}.dot.bad{background:#F2733F}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.panel p{margin:0}
+.btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button{font:inherit;font-weight:600;border-radius:12px;padding:11px 18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:1.05rem;padding:14px 22px}
+button.link{border:none;background:none;padding:4px 0;color:var(--accent);font-weight:500;text-decoration:underline;text-underline-offset:3px}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px}
+
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:480px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--sunk);border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:.82rem;font-weight:500;line-height:1.25;border:2px solid transparent}
+.tile svg{width:38px;height:38px;color:var(--accent)}
+.tile.ok svg{color:var(--good)} .tile.ko{background:color-mix(in srgb,var(--warn) 16%,transparent)} .tile.ko svg{color:var(--warn)}
+.tile .s{font-size:.7rem;color:var(--muted);font-weight:400}
+button.tile{font-weight:500;cursor:pointer}
+button.tile.ok{border-color:var(--good);background:color-mix(in srgb,var(--good) 10%,transparent)}
+button.tile.ko{border-color:var(--warn)}
+
+.pill{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--sunk);flex-wrap:wrap}
+.pill svg{width:26px;height:26px;color:var(--accent);flex:none}
+.pill .grow{flex:1 1 0;min-width:0}
+.pill.good svg{color:var(--good)} .pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent)} .pill.warn svg{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-weight:500;font-size:.85rem;padding:7px 11px;border-radius:999px}
+.chip.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row input{font:inherit;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);flex:1 1 140px;min-width:0}
+.check{display:flex;gap:10px;align-items:center;font-size:.92rem}
+.check input{accent-color:var(--accent);width:18px;height:18px}
+
+.preview{display:flex;gap:14px;align-items:center;padding:12px;border-radius:12px;background:var(--sunk)}
+.preview .mini{flex:none;width:88px;height:58px;border-radius:6px;background:#0B1110;position:relative;border:3px solid var(--ink)}
+.preview .mini i{position:absolute;left:50%;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;background:#5FE0C6}
+
+.hero{display:flex;gap:18px;align-items:center;padding:18px;border-radius:14px;background:var(--sunk)}
+.hero .disc{flex:none;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--muted)}
+.hero .disc svg{width:48px;height:48px}
+.hero.good .disc{background:var(--good)} .hero.warn .disc{background:var(--warn)} .hero.bad .disc{background:var(--bad)}
+.hero .big{font-family:var(--f-display);font-weight:800;font-size:2rem;line-height:1.05;text-wrap:balance}
+.hero .num{font-family:var(--f-mono);font-size:1.1rem}
+.hero.good .big{color:var(--good)} .hero.warn .big{color:var(--warn)} .hero.bad .big{color:var(--bad)}
+.gauge{width:100%;height:auto;display:block}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fact{background:var(--sunk);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.fact .n{font-family:var(--f-mono);font-size:1.2rem;font-variant-numeric:tabular-nums}
+.fact .t{font-size:.72rem;color:var(--muted)}
+.fact.good .n{color:var(--good)} .fact.warn .n{color:var(--warn)} .fact.bad .n{color:var(--bad)}
+.how{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;border:1px dashed var(--line)}
+.how svg{width:40px;height:40px;flex:none;color:var(--accent)}
+.bar{height:10px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--good);width:0%;transition:width .4s}
+.break{border:2px solid var(--accent);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.chart{width:100%;height:auto;display:block}
+.painrow{display:flex;gap:4px;flex-wrap:wrap}
+.painrow button{width:38px;height:38px;padding:0;border-radius:10px;font-family:var(--f-mono);font-weight:500}
+.painrow button.sel{background:var(--pain);border-color:var(--pain);color:#fff}
+.insight{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.insight svg{width:30px;height:30px;color:var(--accent);flex:none}
+details{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.panel details{background:var(--sunk);border:none;padding:10px 14px}
+summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:10px}
+details table{border-collapse:collapse;width:100%;font-size:.86rem}
+details td,details th{border-top:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+details th{font-weight:600;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.tablewrap{overflow-x:auto}
+select{font:inherit;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+a{color:var(--accent)}
+
+.cal{position:fixed;inset:0;z-index:50;background:#0B1110;color:#EAF2EF}
+.cal-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+.cal-msg svg{width:min(320px,70vw);height:auto;aspect-ratio:160/96;color:#5FE0C6}
+.cal-msg .t{font-family:var(--f-display);font-weight:800;font-size:clamp(1.6rem,4vw,2.8rem);line-height:1.1;max-width:20ch;text-wrap:balance}
+.cal-msg .s{font-size:1.1rem;color:#9FB4AE;max-width:34ch}
+.cal-msg .n{font-family:var(--f-mono);font-size:2.6rem;color:#5FE0C6;min-height:1.2em}
+.cal-dot{position:absolute;left:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#5FE0C6;animation:pulse 1.1s ease-in-out infinite}
+.cal-dot::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#0B1110}
+@keyframes pulse{50%{transform:scale(.75)}}
+.cal-skip{position:absolute;right:16px;bottom:16px;background:transparent;color:#9FB4AE;border-color:#33463F}
+.q{font-weight:600;margin:0 0 8px}
+.set{display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.srow input[type=range]{flex:1 1 160px;max-width:260px;accent-color:var(--accent)}
+.seg{display:flex;gap:2px;background:var(--sunk);padding:3px;border-radius:10px}
+.segb{border:none;background:transparent;padding:7px 12px;font-weight:500;font-size:.88rem;color:var(--muted);border-radius:8px}
+.segb.sel{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.swatches{display:flex;gap:8px}
+.sw{width:32px;height:32px;padding:0;border-radius:50%;background:linear-gradient(135deg,var(--c1) 50%,var(--c2) 50%);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.sw.sel{box-shadow:0 0 0 3px var(--ink)}
+.sounds{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}
+.snd{display:flex;align-items:stretch;border-radius:10px;background:var(--sunk);border:2px solid transparent;overflow:hidden}
+.snd.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.snd button{border:none;background:transparent;border-radius:0}
+.snd-pick{flex:1;display:flex;align-items:center;gap:8px;padding:9px 10px;font-weight:500;font-size:.88rem;text-align:left}
+.snd-pick svg{width:20px;height:20px;flex:none;color:var(--accent)}
+.snd-play{padding:0 12px;color:var(--accent)} .snd-play svg{width:14px;height:14px}
+.snd-play:hover,.snd-pick:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.mon{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px}
+.mt{display:grid;grid-template-columns:22px 1fr;grid-template-rows:auto auto;column-gap:6px;align-items:center;padding:7px 8px;border-radius:9px;background:var(--surface);border-left:4px solid var(--line)}
+.mt svg{grid-row:span 2;width:22px;height:22px;color:var(--muted)}
+.mt .l{font-size:.7rem;color:var(--muted);line-height:1.15}
+.mt .v{font-family:var(--f-mono);font-size:.9rem;font-variant-numeric:tabular-nums}
+.mt.good{border-left-color:var(--good)} .mt.warn{border-left-color:var(--warn)} .mt.bad{border-left-color:var(--bad)}
+.mt.warn .v{color:var(--warn)} .mt.bad .v{color:var(--bad)}
+.rfields{display:flex;flex-direction:column;gap:8px}
+.rf{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--sunk);font-size:.92rem;line-height:1.3}
+.rf .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--f-mono);font-weight:700;font-size:.85rem}
+.rf .grow{flex:1 1 0;min-width:0}
+.rf input{font:inherit;font-family:var(--f-mono);width:76px;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-align:right}
+table.cmp{width:100%;border-collapse:collapse;font-size:.9rem}
+table.cmp th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:6px}
+table.cmp td{border-top:1px solid var(--line);padding:8px 6px;font-variant-numeric:tabular-nums}
+table.cmp td.ok{color:var(--good);font-weight:600} table.cmp td.ko{color:var(--warn);font-weight:600}
+.livebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 12%,transparent);font-size:.9rem}
+.livebar .grow{flex:1 1 200px;min-width:0}
+.lrdot{display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--accent);vertical-align:-4px;animation:pulse 1.1s ease-in-out infinite}
+.blink{animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
+.opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;font-weight:500;font-size:.8rem;line-height:1.2;text-align:center;background:var(--sunk);border:2px solid transparent}
+.opt svg{width:72px;height:45px;fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.opt svg .cam{fill:var(--accent);stroke:none}
+.opt svg .ref{stroke:var(--muted);stroke-dasharray:2 3;stroke-width:1.2}
+.opt svg .lid{stroke-width:4}
+.opt svg .eye{fill:var(--ink);stroke:none}
+.opt.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+/* réglage guidé */
+.guide{display:flex;align-items:center;justify-content:center}
+.g-center{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:24px}
+.g-arrow{width:120px;height:120px;color:#E6A83A}
+.g-num{font-family:var(--f-mono);font-size:clamp(3.5rem,10vw,7rem);line-height:1;color:#E6A83A;font-variant-numeric:tabular-nums}
+.g-txt{font-family:var(--f-display);font-weight:800;font-size:clamp(1.5rem,4vw,2.6rem)}
+.g-sub{color:#9FB4AE;font-size:1.05rem;max-width:36ch}
+.guide.ok .g-arrow,.guide.ok .g-num{color:#4CC47E}
+.g-dot{width:40px;height:40px;border-radius:50%;background:#5FE0C6;position:relative;animation:pulse 1.1s ease-in-out infinite;margin-bottom:6px}
+.g-dot::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#0B1110}
+.g-meter{position:absolute;left:max(24px,env(safe-area-inset-left,0px));top:10%;bottom:10%;width:26px;border-radius:13px;background:#1B2826}
+.g-zone{position:absolute;left:0;right:0;background:rgba(76,196,126,.45);border-radius:6px}
+.g-mark{position:absolute;left:-8px;right:-8px;height:6px;margin-top:-3px;border-radius:3px;background:#F1F6F4;transition:top .25s}
+.g-eye{position:absolute;left:34px;top:calc(18.2% - .6em);font-size:.75rem;color:#9FB4AE;white-space:nowrap}
+.g-actions{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:0 16px}
+.g-actions button{background:#162120;color:#EAF2EF;border-color:#33463F}
+.g-voice{display:flex;align-items:center;gap:6px;color:#9FB4AE;font-size:.9rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-chair" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6v20h20M14 26v16M34 26v16M10 26h28"/></symbol>
+    <symbol id="i-back" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="9" r="5"/><path d="M24 15v15h10v12M24 20h8"/><path d="M16 12v30" stroke-dasharray="3 4"/></symbol>
+    <symbol id="i-glasses" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="14" cy="26" r="8"/><circle cx="34" cy="26" r="8"/><path d="M22 25c1.3-1.3 2.7-1.3 4 0M6 24 3 16M42 24l3-8"/></symbol>
+    <symbol id="i-light" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="22" r="8"/><path d="M24 4v5M24 35v5M6 22h5M37 22h5M11 9l3 3M34 32l3 3M37 9l-3 3M14 32l-3 3M18 44h12"/></symbol>
+    <symbol id="i-screen" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="5" y="8" width="38" height="24" rx="2"/><path d="M24 32v8M16 40h16"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="5" y="13" width="26" height="22" rx="3"/><path d="M31 21l12-6v18l-12-6z"/></symbol>
+    <symbol id="i-horizon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 24c5-7 12-10 20-10s15 3 20 10c-5 7-12 10-20 10S9 31 4 24z"/><circle cx="24" cy="24" r="5"/></symbol>
+    <symbol id="i-up" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 40V9M12 21 24 9l12 12"/></symbol>
+    <symbol id="i-down" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8v31M12 27l12 12 12-12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 25l9 9 19-20"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6 44 40H4z"/><path d="M24 18v10M24 34v1"/></symbol>
+    <symbol id="i-face" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="20" r="11"/><path d="M8 44c2-8 9-12 16-12s14 4 16 12"/></symbol>
+    <symbol id="i-head-down" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="28" cy="16" r="8"/><path d="M20 24c-3 4-4 8-4 18M34 42c0-8-2-12-6-15"/></symbol>
+    <symbol id="i-forward" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="12" r="6"/><path d="M26 18 18 28v14M18 28h12M38 12h6M41 9l3 3-3 3"/></symbol>
+    <symbol id="i-slouch" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="28" cy="12" r="6"/><path d="M26 18c-8 4-10 10-10 24M16 30h14"/></symbol>
+    <symbol id="i-tilt" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="12" r="6"/><path d="M8 26l32-6M24 18v24"/></symbol>
+    <symbol id="i-shrug" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="16" r="6"/><path d="M6 22c5-2 8-2 12 2M42 22c-5-2-8-2-12 2M24 22v20M10 34v-8M38 34v-8"/><path d="M7 40l3 3 3-3M35 40l3 3 3-3"/></symbol>
+    <symbol id="i-roll" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="20" cy="14" r="8"/><path d="M14 10l12 8" stroke-width="2"/><path d="M24 22v20M10 30h28"/><path d="M34 6v14" stroke-dasharray="2 4"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="22" cy="14" r="9"/><path d="M14 30c3-4 10-5 14-2l6 4M28 28v-6M32 30v-5M24 28v-4M34 32c2 4 2 8 0 12M10 44c2-6 4-10 8-14"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="6"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.9 9.9l4.2 4.2M33.9 33.9l4.2 4.2M9.9 38.1l4.2-4.2M33.9 14.1l4.2-4.2"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 18h8l10-8v28l-10-8H8z"/><path d="M32 18c2 3 2 9 0 12M37 13c5 6 5 16 0 22"/></symbol>
+    <symbol id="i-play" viewBox="0 0 48 48"><path d="M16 10l24 14-24 14z" fill="currentColor"/></symbol>
+    <symbol id="i-chin" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="18" r="9"/><path d="M38 18h-7M34 14l-4 4 4 4M24 27v15"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="7"/><path d="M8 18a17 17 0 0 1 32 0M40 18l1-7M40 18l-7-1"/></symbol>
+    <symbol id="i-shoulders" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="12" r="6"/><path d="M6 30c4-6 10-8 18-8s14 2 18 8M10 22l-2-6M38 22l2-6"/></symbol>
+    <symbol id="i-stand" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="32" height="20" rx="2"/><path d="M24 26v14M14 42h20M42 10v12M39 13l3-3 3 3M39 19l3 3 3-3"/></symbol>
+    <symbol id="i-books" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M10 14h26l4 6H14z"/><rect x="6" y="28" width="36" height="6" rx="1"/><rect x="8" y="34" width="32" height="6" rx="1"/><path d="M14 20v8M38 20v8"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M8 40h32M14 34V22M24 34V12M34 34V26"/></symbol>
+    <symbol id="i-desk" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h40M8 22v20M40 22v20"/><rect x="16" y="6" width="16" height="11" rx="1"/><path d="M24 17v5"/></symbol>
+    <symbol id="i-knee" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8v18h18v16M22 42h12"/><path d="M14 26a4 4 0 0 0 4-4" stroke-dasharray="2 3"/></symbol>
+    <symbol id="i-elbow" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="8" r="5"/><path d="M14 13v16h20"/><path d="M14 22a7 7 0 0 0 7 7" stroke-dasharray="2 3"/><path d="M28 34h14"/></symbol>
+    <symbol id="i-wrist" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 28h24l8-2h8"/><rect x="26" y="32" width="18" height="6" rx="1"/><path d="M4 34h18"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="4" y="16" width="34" height="16" rx="2"/><path d="M10 22h2M16 22h2M22 22h2M28 22h2M12 27h16" stroke-linecap="round"/><ellipse cx="43" cy="26" rx="3" ry="5"/></symbol>
+    <symbol id="i-window" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="6" y="6" width="16" height="28"/><path d="M14 6v28M6 20h16"/><rect x="30" y="22" width="14" height="10" rx="1"/><path d="M37 32v6"/></symbol>
+    <symbol id="i-wall" viewBox="0 0 160 96" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="150" y="4" width="6" height="88" fill="currentColor" opacity=".25" stroke="none"/>
+      <circle cx="26" cy="30" r="12" stroke-width="3"/><circle cx="33" cy="28" r="2.5" fill="currentColor" stroke="none"/>
+      <path d="M26 42v26M14 92l12-24 12 24" stroke-width="3"/>
+      <path d="M38 28H146" stroke-width="2.5" stroke-dasharray="6 5"/>
+      <circle cx="146" cy="28" r="6" fill="currentColor" stroke="none"/>
+      <rect x="92" y="40" width="5" height="30" rx="1" stroke-width="2.5"/><path d="M94 70v14M86 84h16" stroke-width="2.5"/>
+      <path d="M86 18l6 5M86 38l6-5" stroke-width="2"/>
+    </symbol>
+    <symbol id="i-pain"viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="12" r="7"/><path d="M24 19v8M14 36c3-6 6-9 10-9s7 3 10 9"/><path d="M30 22l4-2M32 26h4" /></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Nuque <span>Droite</span></h1>
+    <div class="hright">
+      <ol class="steps" id="steps">
+        <li data-s="prep"><b>1</b>Préparer</li>
+        <li data-s="measure"><b>2</b>Mesurer</li>
+        <li data-s="result"><b>3</b>Résultat</li>
+        <li data-s="watch"><b>4</b>Suivi</li>
+      </ol>
+      <button class="tool" id="tDesk"><svg><use href="#i-desk"/></svg>Mon poste</button>
+      <button class="tool" id="tSet" aria-label="Réglages"><svg><use href="#i-gear"/></svg>Réglages</button>
+      <button class="tool" id="tHist"><svg><use href="#i-chart"/></svg>Historique<span class="live-dot" id="watchDot" hidden title="Suivi en cours"></span></button>
+    </div>
+  </header>
+  <div class="grid">
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="proc" hidden></canvas>
+      <canvas id="view" hidden></canvas>
+      <canvas id="overlay"></canvas>
+      <div class="ph" id="ph"><svg width="56" height="56" style="opacity:.6"><use href="#i-cam"/></svg><div>Images analysées sur votre ordinateur.<br>Rien n'est envoyé.</div></div>
+      <div class="badge" id="badge" hidden><span class="dot" id="bdot"></span><span id="btxt"></span></div>
+      <div class="enh" id="enh" hidden>Contre-jour corrigé</div>
+    </div>
+    <section class="panel" id="panel" aria-live="polite"></section>
+  </div>
+  <details>
+    <summary>Sur quoi reposent les conseils</summary>
+    <div class="tablewrap"><table>
+      <tr><th>Repère</th><th>Valeur</th><th>Source</th></tr>
+      <tr><td>Haut de l'écran</td><td>À hauteur des yeux ou un peu en dessous, jamais au-dessus</td><td>INRS, OSHA, CCHST</td></tr>
+      <tr><td>Centre de l'écran</td><td>10 à 20° sous l'horizontale des yeux</td><td>OSHA (15–20°), CCHST (≈ 15° ou un peu moins)</td></tr>
+      <tr><td>Verres progressifs</td><td>Écran plus bas : 18 à 30°</td><td>INRS, OSHA, CCHST</td></tr>
+      <tr><td>Distance œil-écran</td><td>50 à 70 cm</td><td>INRS</td></tr>
+      <tr><td>Clavier</td><td>10 à 15 cm du bord du bureau, avant-bras en appui</td><td>INRS</td></tr>
+      <tr><td>Écran et fenêtre</td><td>Écran perpendiculaire à la fenêtre</td><td>INRS</td></tr>
+      <tr><td>Pauses</td><td>Pause active environ toutes les 30 min</td><td>INRS</td></tr>
+      <tr><td>Ordinateur portable</td><td>≈ 11° de flexion du cou en plus qu'un poste fixe</td><td>PubMed 30373975</td></tr>
+    </table></div>
+    <p class="note"><a href="https://www.inrs.fr/risques/travail-ecran/prevention-risques.html" target="_blank" rel="noopener">INRS</a> · <a href="https://www.osha.gov/etools/computer-workstations/components/monitors" target="_blank" rel="noopener">OSHA</a> · <a href="https://www.cchst.ca/oshanswers/ergonomics/office/monitor_positioning.pdf" target="_blank" rel="noopener">CCHST</a> · <a href="https://pubmed.ncbi.nlm.nih.gov/30373975/" target="_blank" rel="noopener">Étude portable / fixe</a>. Outil de réglage, pas un diagnostic : si la douleur dure ou descend dans le bras, consultez.</p>
+  </details>
+</div>
+
+<div class="cal" id="cal" hidden>
+  <div class="cal-msg" id="calMsg"><svg><use id="calIco" href="#i-horizon"/></svg><div class="t" id="calT"></div><div class="s" id="calS"></div><div class="n" id="calN"></div></div>
+  <div class="cal-dot" id="calDot" hidden></div>
+  <button class="cal-skip" id="calStop">Annuler</button>
+</div>
+
+<div class="cal guide" id="guideBox" hidden>
+  <div class="g-meter" aria-hidden="true"><div class="g-zone" id="gZone"></div><div class="g-mark" id="gMark"></div><span class="g-eye">yeux</span></div>
+  <div class="g-center">
+    <div class="g-dot" id="gDot" hidden></div>
+    <svg class="g-arrow" id="gArrowSvg"><use id="gArrow" href="#i-up"/></svg>
+    <div class="g-num" id="gNum">—</div>
+    <div class="g-txt" id="gTxt">Bougez l'écran</div>
+    <div class="g-sub" id="gSub"></div>
+  </div>
+  <div class="g-actions">
+    <button id="gCheck" hidden>Vérifier au mur (barre Espace)</button>
+    <label class="g-voice"><input type="checkbox" id="gVoice" checked> Voix</label>
+    <button id="gStop">Terminer</button>
+  </div>
+</div>
+
+<script type="module">
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const FACE_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const POSE_MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const RAD = Math.PI/180, DEG = 180/Math.PI;
+const HFOV = 65, IRIS_CM = 1.17, EYE_R_CM = 1.2, CAM_GAP_CM = 1;
+const AGREE_CM = 2;              // deux mesures « concordent » si leurs conseils diffèrent de 2 cm au plus
+
+const $ = s => document.querySelector(s);
+const panel = $("#panel"), video = $("#video"), overlay = $("#overlay"), octx = overlay.getContext("2d");
+const ico = (id, cls="") => `<svg class="${cls}"><use href="#${id}"/></svg>`;
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const S = {
+  step:"prep", view:"prep",
+  prefs: Object.assign({progressive:false, sound:"carillon", volume:.6, delay:30, overrides:{}, camMode:"auto", theme:"auto", accent:"sapin", textSize:"normal", blur:true}, store.get("nd4_prefs", {})),
+  bases: store.get("nd5_bases", {}),        // une mesure par écran
+  series: store.get("nd5_series", {}),      // mesures récentes par écran
+  hist: store.get("nd4_hist", {}),
+  desk: store.get("nd4_desk", {}),
+  flip:1, face:null, pose:null, running:false, lastTs:0, tick:0,
+  m:null, lastPose:null, luma:{all:0, face:0},
+  enh:{gamma:1, active:false, lut:null, lutG:0},
+  ema:{}, watch:null, watching:false, camLabel:"", audio:null, busy:false, cancel:false, fails:0
+};
+const savePrefs = ()=>store.set("nd4_prefs", S.prefs);
+if(typeof S.prefs.sound !== "string") S.prefs.sound = "carillon";
+
+/* ================= Apparence ================= */
+const ACCENTS = {sapin:["#0E7566","#3CBFA8","Sapin"], ocean:["#1F5FA8","#6FA8F0","Océan"], prune:["#7A3E9D","#C08BEA","Prune"], corail:["#B9472A","#F08A64","Corail"], ardoise:["#3D4B5C","#A3B4C8","Ardoise"]};
+function applyTheme(){
+  const r = document.documentElement;
+  if(S.prefs.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", S.prefs.theme);
+  const [l, d] = ACCENTS[S.prefs.accent] || ACCENTS.sapin;
+  let st = document.getElementById("accentCss");
+  if(!st){ st = document.createElement("style"); st.id = "accentCss"; document.head.appendChild(st); }
+  st.textContent = `:root{--accent:${l};--accent-ink:#FFFFFF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent:${d};--accent-ink:#0B1110}}
+:root[data-theme="dark"]{--accent:${d};--accent-ink:#0B1110}`;
+  r.style.fontSize = S.prefs.textSize === "grand" ? "112.5%" : "";
+}
+applyTheme();
+
+/* ================= Écrans ================= */
+const PRESETS = [
+  {l:'MacBook Air 13"', d:13.6, r:[1.538,1]}, {l:'MacBook Pro 14"', d:14.2, r:[1.54,1]},
+  {l:'MacBook Air 15"', d:15.3, r:[1.545,1]}, {l:'MacBook Pro 16"', d:16.2, r:[1.547,1]},
+  {l:'Écran 22"', d:22, r:[16,9], ext:1}, {l:'Écran 24"', d:24, r:[16,9], ext:1},
+  {l:'Écran 27"', d:27, r:[16,9], ext:1}, {l:'Écran 32"', d:32, r:[16,9], ext:1},
+  {l:'Écran 34" large', d:34, r:[21,9], ext:1}
+];
+const heightOf = (d, r) => d*2.54*r[1]/Math.hypot(r[0], r[1]);
+const fromPreset = p => ({h:heightOf(p.d, p.r), label:p.l, ext:!!p.ext});
+function guessScreen(){
+  const w = screen.width, h = screen.height, r = w/h;
+  if(r < 1.7 && w <= 1800) return {...fromPreset(PRESETS[w<=1470?0 : w<=1512?1 : w<=1710?2 : 3]), auto:true};
+  if(r > 2.2) return {...fromPreset(PRESETS[8]), auto:true};
+  const d = w<=1600?22 : w<=2048?24 : w<=2560?27 : 32;
+  return {h:heightOf(d, r<1.7?[16,10]:[16,9]), label:`Écran externe ${d}"`, ext:true, auto:true};
+}
+function parseModel(s){ // Dell : P2422H → 24"
+  const t = s.toUpperCase().replace(/[\s\-_]+/g, "").replace(/^DELL/, "");
+  let d = null, m = t.match(/[A-Z]+(\d{2})(\d{2})/);
+  if(m && +m[1] >= 17 && +m[1] <= 57) d = +m[1];
+  if(!d){ const all = t.match(/\d{2}/g) || []; d = all.map(Number).find(x=>x>=17 && x<=57) || null; }
+  if(!d) return null;
+  const r = d >= 49 ? [32,9] : (d >= 34 || /\d{4}[A-Z]*W/.test(t)) ? [21,9] : /^U24(1[0-5]|2[01])|^U2520/.test(t) ? [16,10] : [16,9];
+  return {h:heightOf(d, r), label:`${s.trim().toUpperCase()} (${d}")`, ext:true};
+}
+// L'écran courant = celui où se trouve la fenêtre ; on retient un choix manuel par écran détecté
+function currentScreen(){ const g = guessScreen(), o = S.prefs.overrides?.[g.label]; return o ? {...o, auto:false, key:g.label} : {...g, key:g.label}; }
+const curBase = () => S.bases[currentScreen().key] || null;
+function setupOf(){
+  const sc = currentScreen(), saved = S.prefs.setup?.[sc.key];
+  if(saved) return saved;
+  const builtIn = !S.camLabel || /facetime|built-in|intégr|integrated/i.test(S.camLabel);
+  const cam = sc.ext && builtIn ? "side" : "top";
+  return {cam, tilt: cam === "top" && !sc.ext ? 20 : cam === "top" ? 0 : 20, tiltSrc:"dessin"};
+}
+function saveSetup(patch){ const k = currentScreen().key; S.prefs.setup = S.prefs.setup || {}; S.prefs.setup[k] = {...setupOf(), ...patch}; savePrefs(); }
+function tiltSVG(d){
+  const r = d*Math.PI/180, x2 = 40 + 30*Math.sin(r), y2 = 44 - 30*Math.cos(r);
+  return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
+}
+
+/* ================= Navigation ================= */
+const ORDER = ["prep","measure","result","watch"];
+function go(view){
+  LR = null;
+  if(ORDER.includes(view)) S.step = view;
+  S.view = view;
+  document.querySelectorAll("#steps li").forEach(li=>{
+    const i = ORDER.indexOf(li.dataset.s), c = ORDER.indexOf(S.step), main = ORDER.includes(view);
+    li.className = main && i===c ? "on" : (i<c ? "done" : "");
+  });
+  $("#tHist").classList.toggle("on", view==="history"); $("#tSet").classList.toggle("on", view==="settings"); $("#tDesk").classList.toggle("on", view==="desk");
+  render[view]();
+}
+$("#tHist").onclick = ()=> S.view==="history" ? go(S.step) : go("history");
+$("#tDesk").onclick = ()=> S.view==="desk" ? go(S.step) : go("desk");
+$("#tSet").onclick = ()=> S.view==="settings" ? go(S.step) : go("settings");
+
+const render = {
+  prep(){
+    const sc = currentScreen(), b = curBase();
+    panel.innerHTML = `
+      <h2>Installez-vous comme pour travailler</h2>
+      <div class="tiles">
+        <div class="tile">${ico("i-chair")}Pieds à plat</div>
+        <div class="tile">${ico("i-back")}Dos au dossier</div>
+        <div class="tile">${ico("i-glasses")}Vos lunettes</div>
+        <div class="tile">${ico("i-light")}Lumière devant</div>
+      </div>
+      <div class="pill">${ico("i-screen")}<span class="grow"><b>${sc.label}</b> <span class="muted">${sc.auto ? "détecté" : ""}${b ? " · mesure enregistrée" : ""}</span></span><button class="link" id="chg">Changer</button></div>
+      <div id="chooser" hidden></div>
+      <label class="check"><input type="checkbox" id="prog" ${S.prefs.progressive?"checked":""}>Verres progressifs</label>
+      <div class="btns">${b ? `<button class="primary" id="resume">Reprendre le suivi</button><button id="start">Nouvelle mesure</button>` : `<button class="primary" id="start">Démarrer</button>`}</div>
+      <p class="note">Vous utilisez deux écrans ? Glissez cette fenêtre sur l'autre : l'app le détecte et garde une mesure pour chacun.</p>`;
+    $("#prog").onchange = e=>{ S.prefs.progressive = e.target.checked; savePrefs(); };
+    $("#chg").onclick = openChooser;
+    $("#start").onclick = async ()=>{ unlockAudio(); if(await startCamera()) go("measure"); };
+    const r = $("#resume"); if(r) r.onclick = async ()=>{ unlockAudio(); if(await startCamera()) startWatch(); };
+  },
+  measure(){
+    const st = setupOf(), sc = currentScreen();
+    const camOpt = (k, t, svg) => `<button class="opt ${st.cam===k?"sel":""}" data-cam="${k}">${svg}<span>${t}</span></button>`;
+    const tiltOpt = d => `<button class="opt ${st.tiltSrc!=="mesure" && st.tilt===d?"sel":""}" data-tilt="${d}">${tiltSVG(d)}<span>${d===0?"Droit":d+"°"}</span></button>`;
+    panel.innerHTML = `
+      <h2>Votre installation</h2>
+      <div><p class="q">Où est la caméra ?</p>
+        <div class="opts">
+          ${camOpt("top", "En haut de cet écran", `<svg viewBox="0 0 80 50"><rect x="14" y="8" width="52" height="32" rx="2"/><circle cx="40" cy="5" r="3" class="cam"/></svg>`)}
+          ${camOpt("side", "MacBook à côté", `<svg viewBox="0 0 80 50"><rect x="4" y="6" width="46" height="30" rx="2"/><rect x="56" y="22" width="22" height="15" rx="1"/><path d="M53 40h28"/><circle cx="67" cy="19.5" r="2.5" class="cam"/></svg>`)}
+          ${camOpt("below", "MacBook devant, en dessous", `<svg viewBox="0 0 80 50"><rect x="14" y="2" width="52" height="28" rx="2"/><rect x="27" y="32" width="26" height="12" rx="1"/><path d="M23 47h34"/><circle cx="40" cy="30" r="2.5" class="cam"/></svg>`)}
+        </div></div>
+      <div><p class="q">Inclinaison de l'écran ${st.cam === "top" ? "" : "du MacBook"} (vu de profil)</p>
+        <div class="opts">${[0,10,20,30].map(tiltOpt).join("")}</div>
+        <div class="row" style="margin-top:8px"><label for="tiltIn" class="note">Angle mesuré avec une appli niveau (plus précis) :</label><input id="tiltIn" type="number" min="-10" max="45" step="1" style="flex:0 0 80px" value="${st.tiltSrc==="mesure" ? st.tilt : ""}" placeholder="ex. 17"><span class="note">°</span></div>
+      </div>
+      <div class="tiles" id="checks"></div>
+      <div class="preview">
+        <div class="mini"><i style="top:22px"></i></div>
+        <span>${st.cam === "top" ? "Asseyez-vous bien droit, dos au dossier, et <b>regardez le rond</b> 3 secondes. C'est tout."
+          : "Asseyez-vous bien droit. Regardez d'abord <b>la caméra du MacBook</b>, puis <b>le rond</b> en haut, en bas et au milieu de cet écran."}</span>
+      </div>
+      <div class="btns"><button class="primary" id="go" disabled>Lancer</button><button class="link" id="force" hidden>Lancer quand même</button></div>
+      <p class="note" id="msg"></p>`;
+    panel.querySelectorAll("[data-cam]").forEach(b=>b.onclick = ()=>{ saveSetup({cam:b.dataset.cam}); render.measure(); });
+    panel.querySelectorAll("[data-tilt]").forEach(b=>b.onclick = ()=>{ saveSetup({tilt:+b.dataset.tilt, tiltSrc:"dessin"}); render.measure(); });
+    $("#tiltIn").onchange = e=>{ const v = parseFloat(e.target.value); if(v >= -10 && v <= 45) saveSetup({tilt:v, tiltSrc:"mesure"}); else if(e.target.value === "") saveSetup({tiltSrc:"dessin", tilt:Math.round(st.tilt/10)*10}); render.measure(); };
+    $("#go").onclick = runCalibration; $("#force").onclick = runCalibration;
+    setTimeout(()=>{ const f = $("#force"); if(f && S.view==="measure") f.hidden = false; }, 8000);
+  },
+  result(){
+    const b = curBase(); if(!b) return go("measure");
+    const sc = currentScreen(), r = screenAdvice(b.sTop, b.sDist, sc.h), dc = distClass(b.sDist), rel = reliability();
+    const howTxt = r.dir > 0 ? (sc.ext ? "Tirez l'écran vers le haut sur son pied, ou ajoutez un réhausseur." : "Posez le MacBook sur un support + clavier et souris externes.")
+                 : r.dir < 0 ? (sc.ext ? "Descendez l'écran sur son pied ou retirez le réhausseur." : "Baissez le support du MacBook.") : "";
+    const confirmFirst = b.mode === "camera" ? false : (rel.n < 2 || !rel.agree);
+    // Suivi en direct : dès qu'il faut bouger l'écran, le chiffre et le schéma suivent ses mouvements
+    const live = r.dir !== 0 && S.running;
+    const dotMode = b.mode === "regard" && b.kHead != null;
+    LR = live ? {b, sc, mode: dotMode ? "dot" : "cam", top:null, D:null, okSince:0, lastSay:0, lastCm:null, saidOk:false, lastDraw:0, voice:true} : null;
+    panel.innerHTML = `
+      <div id="lrHero">${heroHTML(r, confirmFirst && !live)}</div>
+      ${live ? `<div class="livebar"><span class="live-dot blink"></span><span class="grow"><b>En direct.</b> ${dotMode ? `Regardez ce rond <span class="lrdot" id="lrDot"></span> et bougez l'écran : le chiffre se met à jour.` : `Bougez l'écran doucement, le chiffre se met à jour. Gardez la même inclinaison.`}</span><label class="check"><input type="checkbox" id="lrVoice" checked>Voix</label></div>` : ""}
+      <div id="lrGauge">${gaugeSVG(b.sTop, b.sDist, sc.h, r)}</div>
+      ${r.dir ? `<div class="how">${ico(sc.ext ? "i-stand" : "i-books")}<span>${howTxt}</span></div>` : ""}
+      <div class="pill ${rel.n >= 2 && rel.agree || b.mode === "camera" ? "good" : "warn"}">${ico(rel.agree ? "i-check" : "i-alert")}<span class="grow">${rel.text}</span></div>
+      <button class="link" id="ruler">${corrOf() ? "Recalée sur votre règle ✓ · revérifier" : "Vérifier la mesure avec une règle"}</button>
+      <div id="lrFacts">${factsHTML(r, b.sDist, sc)}</div>
+      ${dc !== "good" ? `<p class="note">${b.sDist < 50 ? "Reculez un peu et grossissez le texte (⌘ +)." : "Rapprochez un peu l'écran."}</p>` : ""}
+      <div class="btns">${
+        confirmFirst ? `<button class="primary" id="again">${rel.n < 2 ? "Confirmer (2e mesure, 15 s)" : "Nouvelle mesure"}</button><button id="watch">Lancer le suivi</button>`
+        : r.dir ? `<button id="watch">Lancer le suivi</button><button id="guide">Plein écran</button>`
+        : `<button class="primary" id="watch">Lancer le suivi</button><button class="link" id="again">Remesurer</button>`}</div>`;
+    $("#watch").onclick = startWatch;
+    $("#ruler").onclick = ()=>go("ruler");
+    const lv = $("#lrVoice"); if(lv) lv.onchange = e=>{ if(LR) LR.voice = e.target.checked; };
+    if(LR){ unlockAudio(); }
+    const gd = $("#guide"); if(gd) gd.onclick = startGuide;
+    const a = $("#again"); if(a) a.onclick = ()=>go("measure");
+    const mv = $("#moved"); if(mv) mv.onclick = ()=>{ S.series[currentScreen().key] = []; store.set("nd5_series", S.series); go("measure"); };
+  },
+  watch(){
+    const b = curBase(), sc = currentScreen(), r = b ? screenAdvice(b.sTop, b.sDist, sc.h) : null;
+    panel.innerHTML = `
+      <div id="breakBox"></div>
+      <div class="hero" id="live"><div class="disc"><svg><use id="liveIco" href="#i-check"/></svg></div><div><div class="big" id="lv">—</div><div class="muted" id="lp"></div></div></div>
+      <div class="facts">
+        <div class="fact" id="f-flex"><span class="n">—</span><span class="t">tête penchée</span></div>
+        <div class="fact" id="f-dist"><span class="n">—</span><span class="t">distance</span></div>
+        <div class="fact" id="f-pct"><span class="n">—</span><span class="t">bonne posture<br>aujourd'hui</span></div>
+      </div>
+      <div class="bar"><i id="pbar"></i></div>
+      <details open><summary>Tout ce que je mesure (14 points)</summary><div class="mon" id="mon"></div><p class="note" style="margin-top:8px">Comparé à votre position assis droit pendant la mesure. Vert : bien · orange : à surveiller · rouge : à corriger.</p></details>
+      ${r ? `<div class="pill ${r.dir ? "warn" : "good"}">${ico(r.dir>0?"i-up":r.dir<0?"i-down":"i-check")}<span class="grow">Écran : <b>${r.dir ? r.title : "bien placé"}</b></span><button class="link" id="recal">Remesurer</button></div>` : ""}
+      ${b && b.ev0 == null ? `<div class="pill warn">${ico("i-alert")}<span class="grow">Refaites une mesure pour activer les nouvelles détections (tête sur le côté, enfoncé dans le siège).</span><button class="link" id="recal2">Mesurer</button></div>` : ""}
+      <div class="btns"><button id="pip">Petite pastille flottante</button><button id="notif">Notifications du Mac</button><button class="link" id="goSet">Son et réglages</button></div>
+      <p class="note">Le suivi continue si cette fenêtre est derrière vos autres applis. Ne la réduisez pas dans le Dock.</p>
+      <button class="link" id="stopW">Arrêter le suivi</button>`;
+    $("#goSet").onclick = ()=>go("settings");
+    const rc = $("#recal"); if(rc) rc.onclick = ()=>go("measure");
+    const rc2 = $("#recal2"); if(rc2) rc2.onclick = ()=>go("measure");
+    $("#notif").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif").textContent = "Indisponible"; } };
+    $("#pip").onclick = openPip;
+    $("#stopW").onclick = ()=>{ S.watching = false; $("#watchDot").hidden = true; saveHist(); go("prep"); };
+    if(S.watch?.breakDue) showBreak();
+  },
+  history(){ renderHistory(); },
+  desk(){ renderDesk(); },
+  settings(){ renderSettings(); },
+  ruler(){ renderRuler(); }
+};
+
+function openChooser(){
+  const c = $("#chooser"); c.hidden = !c.hidden; if(c.hidden) return;
+  const cur = currentScreen();
+  c.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">
+    <div class="chips">${PRESETS.map((p,i)=>`<button class="chip ${p.l===cur.label?"sel":""}" data-i="${i}">${p.l}</button>`).join("")}</div>
+    ${"getScreenDetails" in window ? `<button id="exact">Trouver le modèle exact automatiquement</button>` : ""}
+    <div class="row"><input id="model" placeholder="Référence, ex. P2422H" autocomplete="off" spellcheck="false"><button id="mok">OK</button></div>
+    <p class="note">La référence est dans  › Réglages Système › Moniteurs, ou au dos de l'écran.</p>
+    <p class="note" id="cmsg"></p></div>`;
+  const set = v => { S.prefs.overrides[cur.key] = v; savePrefs(); render.prep(); };
+  c.querySelectorAll(".chip").forEach(b=>b.onclick = ()=>set(fromPreset(PRESETS[b.dataset.i])));
+  const ok = ()=>{ const v = parseModel($("#model").value); v ? set(v) : ($("#cmsg").textContent = "Taille introuvable dans cette référence. Choisissez un bouton."); };
+  $("#mok").onclick = ok; $("#model").onkeydown = e=>{ if(e.key==="Enter") ok(); };
+  const ex = $("#exact");
+  if(ex) ex.onclick = async ()=>{
+    try{
+      const d = await window.getScreenDetails(), cs = d.currentScreen, lab = cs?.label || "";
+      if(cs?.isInternal || /built-?in|intégr|retina/i.test(lab)){ const g = guessScreen(); set({h:g.h, label:g.label, ext:false}); return; }
+      const v = parseModel(lab); if(v) set(v); else $("#cmsg").textContent = lab ? `Écran trouvé : ${lab}, sans taille lisible. Choisissez un bouton.` : "Nom de l'écran non disponible.";
+    }catch(e){ $("#cmsg").textContent = "Autorisation refusée. Choisissez un bouton ou tapez la référence."; }
+  };
+}
+
+/* ================= Caméra, moteur, horloge ================= */
+async function startCamera(){
+  if(S.running) return true;
+  const btn = $("#start"); if(btn){ btn.disabled = true; btn.textContent = "Chargement…"; }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280}, height:{ideal:720}, facingMode:"user"}, audio:false});
+    video.srcObject = stream; await video.play();
+    const tr = stream.getVideoTracks()[0]; S.camLabel = tr.label || ""; boostExposure(tr);
+  }catch(e){
+    panel.insertAdjacentHTML("beforeend", `<p class="note" style="color:var(--bad)">Caméra bloquée : autorisez-la dans Chrome (icône dans la barre d'adresse) et dans Réglages Système › Confidentialité › Caméra.</p>`);
+    if(btn){ btn.disabled = false; btn.textContent = "Réessayer"; }
+    return false;
+  }
+  $("#ph").hidden = true;
+  try{
+    const { FilesetResolver, FaceLandmarker, PoseLandmarker } = await import(MP + "/vision_bundle.mjs");
+    const fs = await FilesetResolver.forVisionTasks(MP + "/wasm");
+    const make = async (Cls, opts, model) => {
+      try{ return await Cls.createFromOptions(fs, {...opts, baseOptions:{modelAssetPath:model, delegate:"GPU"}}); }
+      catch(e){ return await Cls.createFromOptions(fs, {...opts, baseOptions:{modelAssetPath:model, delegate:"CPU"}}); }
+    };
+    S.face = await make(FaceLandmarker, {runningMode:"VIDEO", numFaces:1, outputFacialTransformationMatrixes:true, outputFaceBlendshapes:true}, FACE_MODEL);
+    S.pose = await make(PoseLandmarker, {runningMode:"VIDEO", numPoses:1, outputSegmentationMasks:true}, POSE_MODEL);
+  }catch(e){
+    panel.insertAdjacentHTML("beforeend", `<p class="note" style="color:var(--bad)">Le moteur d'analyse n'a pas pu se charger. Vérifiez Internet puis rechargez la page.</p>`);
+    if(btn) btn.textContent = "Moteur indisponible";
+    return false;
+  }
+  $("#badge").hidden = false; S.running = true;
+  startClock();
+  return true;
+}
+// Horloge dans un Worker : elle n'est pas ralentie quand la fenêtre est derrière d'autres applis
+function startClock(){
+  let n = 0; const tick = ()=>{ loop(); if(++n % 12 === 0) sampleLight(); if(n % 120 === 0) periodic(); };
+  try{
+    const w = new Worker(URL.createObjectURL(new Blob(["let t;onmessage=e=>{clearInterval(t);t=setInterval(()=>postMessage(0),e.data)}"], {type:"text/javascript"})));
+    w.onmessage = tick; w.postMessage(80);
+    document.addEventListener("visibilitychange", ()=>w.postMessage(document.hidden ? 250 : 80));
+  }catch(e){ setInterval(tick, 80); }
+}
+
+/* ================= Contre-jour ================= */
+const proc = $("#proc"), pctx = proc.getContext("2d", {willReadFrequently:true});
+function sampleLight(){
+  if(!S.running || video.readyState < 2) return;
+  const c = sampleLight.c || (sampleLight.c = document.createElement("canvas"));
+  c.width = 64; c.height = 48; const x = c.getContext("2d", {willReadFrequently:true});
+  x.drawImage(video, 0, 0, 64, 48);
+  const px = x.getImageData(0,0,64,48).data, lum = i => .2126*px[i] + .7152*px[i+1] + .0722*px[i+2];
+  let all = 0; for(let i=0;i<px.length;i+=4) all += lum(i); all /= px.length/4;
+  let face = all;
+  if(S.m){
+    const xs = S.m.L.map(p=>p.x), ys = S.m.L.map(p=>p.y);
+    const x0=Math.max(0,Math.floor(Math.min(...xs)*64)), x1=Math.min(63,Math.ceil(Math.max(...xs)*64));
+    const y0=Math.max(0,Math.floor(Math.min(...ys)*48)), y1=Math.min(47,Math.ceil(Math.max(...ys)*48));
+    let s=0,n=0; for(let y=y0;y<=y1;y++) for(let xx=x0;xx<=x1;xx++){ s+=lum((y*64+xx)*4); n++; }
+    if(n) face = s/n;
+  }
+  S.luma = {all, face};
+  const E = S.enh, need = face < 105 || face < all*0.8;
+  let g = 1;
+  if(need && face > 3){ g = Math.log(125/255)/Math.log(Math.max(face,4)/255); g = Math.max(0.3, Math.min(1, g)); }
+  E.gamma += 0.5*(g - E.gamma); E.active = E.gamma < 0.95;
+  $("#enh").hidden = !E.active; proc.hidden = !E.active; video.style.visibility = E.active ? "hidden" : "visible";
+}
+function prepFrame(){
+  const E = S.enh; if(!E.active) return video;
+  const vw = video.videoWidth, vh = video.videoHeight, w = Math.min(960, vw), h = Math.round(w*vh/vw);
+  if(proc.width !== w){ proc.width = w; proc.height = h; }
+  pctx.drawImage(video, 0, 0, w, h);
+  if(!E.lut || Math.abs(E.lutG - E.gamma) > 0.02){ E.lut = new Uint8ClampedArray(256); for(let i=0;i<256;i++) E.lut[i] = 255*Math.pow(i/255, E.gamma); E.lutG = E.gamma; }
+  const img = pctx.getImageData(0, 0, w, h), d = img.data, lut = E.lut;
+  let x0=.3,x1=.7,y0=.15,y1=.75;
+  if(S.m){ const xs=S.m.L.map(p=>p.x), ys=S.m.L.map(p=>p.y); x0=Math.min(...xs); x1=Math.max(...xs); y0=Math.min(...ys); y1=Math.max(...ys); }
+  let lo=255, hi=0;
+  for(let y=Math.max(0,y0*h|0); y<Math.min(h,y1*h); y+=4) for(let x=Math.max(0,x0*w|0); x<Math.min(w,x1*w); x+=4){
+    const i=(y*w+x)*4, v=lut[(d[i]+d[i+1]+d[i+2])/3|0]; if(v<lo) lo=v; if(v>hi) hi=v;
+  }
+  const k = Math.min(1.8, 230/Math.max(60, hi-lo));
+  for(let i=0;i<d.length;i+=4){ d[i]=(lut[d[i]]-lo)*k+12; d[i+1]=(lut[d[i+1]]-lo)*k+12; d[i+2]=(lut[d[i+2]]-lo)*k+12; }
+  pctx.putImageData(img, 0, 0);
+  return proc;
+}
+function boostExposure(track){
+  try{
+    const c = track.getCapabilities ? track.getCapabilities() : {}, adv = {};
+    if(c.exposureMode && c.exposureMode.includes("continuous")) adv.exposureMode = "continuous";
+    if(c.exposureCompensation) adv.exposureCompensation = (c.exposureCompensation.max||0)*0.6;
+    if(Object.keys(adv).length) track.applyConstraints({advanced:[adv]}).catch(()=>{});
+  }catch(e){}
+}
+
+/* ================= Flou de l'arrière-plan (aperçu seulement) ================= */
+const view = $("#view"), vctx = view.getContext("2d"), maskC = document.createElement("canvas"), mctx = maskC.getContext("2d"), tmpC = document.createElement("canvas"), tctx = tmpC.getContext("2d");
+let maskReady = false, maskImg = null;
+function updateMask(f, w, h){
+  if(maskC.width !== w || maskC.height !== h){ maskC.width = w; maskC.height = h; maskImg = mctx.createImageData(w, h); }
+  const d = maskImg.data; for(let i=0, j=3; i<f.length; i++, j+=4) d[j] = f[i]*255;
+  mctx.putImageData(maskImg, 0, 0); maskReady = true;
+}
+function renderView(src){
+  if(!S.prefs.blur || !maskReady){ view.hidden = true; return; }
+  const w = 640, h = Math.round(w*video.videoHeight/video.videoWidth);
+  if(view.width !== w || view.height !== h){ view.width = tmpC.width = w; view.height = tmpC.height = h; }
+  vctx.filter = "blur(18px)"; vctx.drawImage(src, -20, -20, w+40, h+40); vctx.filter = "none";   // fond flou (débordé pour éviter les bords)
+  tctx.globalCompositeOperation = "copy"; tctx.drawImage(src, 0, 0, w, h);
+  tctx.globalCompositeOperation = "destination-in"; tctx.drawImage(maskC, 0, 0, w, h);          // la personne seule, nette
+  vctx.drawImage(tmpC, 0, 0);
+  view.hidden = false;
+}
+
+/* ================= Mesure image par image ================= */
+const elev = v => Math.atan2(v[1], Math.hypot(v[0], v[2])) * DEG;
+function loop(){
+  if(!S.running || video.readyState < 2) return;
+  let ts = performance.now(); if(ts <= S.lastTs) ts = S.lastTs + 1; S.lastTs = ts;
+  const W = video.videoWidth, H = video.videoHeight, src = prepFrame();
+  let fr, pr = null;
+  try{ fr = S.face.detectForVideo(src, ts); }catch(e){ return; }
+  if(S.tick++ % 3 === 0){ try{ pr = S.pose.detectForVideo(src, ts); }catch(e){} }
+  if(pr && pr.segmentationMasks?.[0]){
+    const mk = pr.segmentationMasks[0];
+    if(S.prefs.blur){ try{ updateMask(mk.getAsFloat32Array(), mk.width, mk.height); }catch(e){} }
+    try{ mk.close(); }catch(e){}
+  }
+  renderView(src);
+  if(pr){
+    const P = pr.landmarks?.[0];
+    if(P && (P[11].visibility ?? 1) > .5 && (P[12].visibility ?? 1) > .5){
+      const sw = Math.hypot((P[11].x-P[12].x)*W, (P[11].y-P[12].y)*H);
+      const shY = (P[11].y+P[12].y)/2*H/sw, eaY = (P[7].y+P[8].y)/2*H/sw;   // positions rapportées à la largeur d'épaules
+      const WL = pr.worldLandmarks?.[0];
+      // buste tourné : une épaule plus en avant que l'autre (profondeur en mètres)
+      const twist = WL ? Math.atan2(WL[12].z - WL[11].z, Math.abs(WL[12].x - WL[11].x))*DEG : null;
+      const wrists = [15,16,19,20].map(i=>P[i]).filter(q=>q && (q.visibility ?? 0) > .5);
+      S.lastPose = {at:ts, P, sw, shMidX:(P[11].x+P[12].x)/2, twist, wrists, shY, eaY, neck:shY - eaY, tilt:Math.atan2((P[11].y-P[12].y)*H, Math.abs((P[11].x-P[12].x)*W))*DEG};
+    } else S.lastPose = {at:ts, P:null};
+  }
+  const L = fr.faceLandmarks?.[0];
+  if(!L){ S.m = null; drawOverlay(null); onMeasure(null); return; }
+  const d = fr.facialTransformationMatrixes?.[0]?.data;
+  const raw = d ? [d[8], d[9], d[10]] : [0,0,1];
+  const tx = Math.tan(HFOV/2*RAD), ty = tx*H/W;
+  const eu = (L[33].x+L[263].x)/2, ev = (L[33].y+L[263].y)/2;
+  const c = [-(eu-.5)*2*tx, (ev-.5)*2*ty, 1];
+  const ir = (a,b)=>Math.hypot((L[a].x-L[b].x)*W, (L[a].y-L[b].y)*H);
+  const irisPx = (ir(469,471)+ir(474,476))/2;
+  const dist = (W/(2*tx)) * IRIS_CM / irisPx;
+  const eyeOff = ([[468,33,133],[473,362,263]].map(([i,a,b]) => L[i].y - (L[a].y+L[b].y)/2).reduce((x,y)=>x+y,0)/2) * H;
+  const eye = Math.asin(Math.max(-1, Math.min(1, eyeOff/irisPx*IRIS_CM/EYE_R_CM)))*DEG;
+  const pose = S.lastPose && ts - S.lastPose.at < 1200 && S.lastPose.P ? S.lastPose : null;
+  const fh = Math.hypot((L[152].x-L[10].x)*W, (L[152].y-L[10].y)*H)/H;          // hauteur du visage (front → menton)
+  const roll = Math.atan2((L[263].y-L[33].y)*H, (L[263].x-L[33].x)*W)*DEG;     // inclinaison de la tête sur le côté
+  const faceW = Math.hypot((L[454].x-L[234].x)*W, (L[454].y-L[234].y)*H);
+  const yaw = Math.atan2(raw[0], raw[2])*DEG;                                     // tête tournée à gauche / droite
+  const bs = fr.faceBlendshapes?.[0]?.categories || [], sc2 = n => bs.find(q=>q.categoryName===n)?.score ?? 0;
+  const blink = bs.length ? (sc2("eyeBlinkLeft") + sc2("eyeBlinkRight"))/2 : null;
+  const squint = bs.length ? (sc2("eyeSquintLeft") + sc2("eyeSquintRight"))/2 : null;
+  let ratio = null, lean = null, handFace = 0;
+  if(pose){
+    ratio = faceW / pose.sw;                                                     // visage / épaules : augmente si la tête avance ou si les épaules s'enroulent
+    lean = (L[1].x - pose.shMidX)*W / pose.sw;                                   // nez décalé par rapport au milieu des épaules
+    const x0 = Math.min(L[234].x, L[454].x) - .03, x1 = Math.max(L[234].x, L[454].x) + .03, mid = (L[10].y + L[152].y)/2, low = L[152].y + (L[152].y - L[10].y)*.6;
+    handFace = pose.wrists.some(q => q.x > x0 && q.x < x1 && q.y > mid && q.y < low) ? 1 : 0;
+  }
+  S.m = {raw, head:elev(raw), c, dist, eye, eu, ev, fh, roll, yaw, faceW, blink, squint, ratio, lean, handFace, twist:pose?.twist ?? null, L, W, H, P:pose?.P ?? null,
+    neck:pose?.neck ?? null, tilt:pose?.tilt ?? null, shY:pose?.shY ?? null, eaY:pose?.eaY ?? null};
+  drawOverlay(S.m); onMeasure(S.m);
+}
+function smooth(k, v, a){ if(v==null) return; S.ema[k] = S.ema[k]==null ? v : S.ema[k] + a*(v - S.ema[k]); }
+
+function checks(m){
+  const backlit = S.luma.face < S.luma.all*0.8 || S.luma.face < 105, fixed = backlit && S.enh.active && !!m;
+  return [
+    {ok:!!m, i:"i-face", t:"Visage", s:"face à l'écran"},
+    {ok:!!(m && m.P), i:"i-shoulders", t:"Épaules", s:"reculez un peu"},
+    {ok:(S.luma.face > 25) && (!backlit || fixed), i:"i-light", t: fixed ? "Contre-jour corrigé" : "Lumière", s:"allumez une lampe"},
+    {ok:!!(m && Math.abs(m.eu-.5) < .2 && m.dist > 35 && m.dist < 110), i:"i-cam", t:"Cadrage", s:"centrez-vous"}
+  ];
+}
+function onMeasure(m){
+  if(cal.active){ if(m) cal.samples.push(m); return; }
+  if(G){ guideTick(m); return; }
+  if(LR && S.view === "result"){ liveResultTick(m); return; }
+  if(S.watching) watchTick(m);
+  if(S.view === "measure"){
+    const it = checks(m), box = $("#checks"); if(!box) return;
+    box.innerHTML = it.map(x=>`<div class="tile ${x.ok?"ok":"ko"}">${ico(x.ok?"i-check":x.i)}${x.t}${!x.ok && x.s ? `<span class="s">${x.s}</span>` : ""}</div>`).join("");
+    const all = it.every(x=>x.ok); if(!S.busy) $("#go").disabled = !all;
+    setBadge(all ? "good" : "warn", all ? "Prêt" : "Ajustez");
+  } else if(!S.watching) setBadge(m ? "good" : "", m ? "Caméra active" : "Absent");
+}
+function setBadge(cls, txt){ $("#bdot").className = "dot " + cls; $("#btxt").textContent = txt; }
+
+/* ================= Calibration : un rond à regarder ================= */
+const cal = {active:false, samples:[]};
+const wait = ms => new Promise(r=>setTimeout(r, ms));
+const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
+const median = a => { const s = [...a].sort((x,y)=>x-y), k = s.length>>1; return s.length%2 ? s[k] : (s[k-1]+s[k])/2; };
+function std(a){ const m=mean(a); return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length); }
+function calMsg(icon, t, s, n){ $("#calMsg").hidden = false; $("#calDot").hidden = true; $("#calIco").setAttribute("href","#"+icon); $("#calT").textContent = t; $("#calS").textContent = s||""; $("#calN").textContent = n ?? ""; }
+function dotFraction(el){
+  const r = el.getBoundingClientRect(), cy = r.top + r.height/2;
+  if(document.fullscreenElement) return cy / window.innerHeight;
+  return Math.min(1, Math.max(0, (window.screenY + (window.outerHeight - window.innerHeight) + cy) / screen.height));
+}
+async function grab(ms){ cal.samples = []; cal.active = true; await wait(ms); cal.active = false; return cal.samples.slice(); }
+function summarize(sm){
+  if(sm.length < 6) return null;
+  return {head:mean(sm.map(s=>s.head)), eye:mean(sm.map(s=>s.eye)), sd:Math.max(std(sm.map(s=>s.head)), std(sm.map(s=>s.eye))), sm};
+}
+async function lookAt(fy){
+  const dot = $("#calDot"); $("#calMsg").hidden = true; dot.hidden = false;
+  dot.style.top = (fy*100) + "%";
+  await wait(1300);
+  const real = dotFraction(dot);
+  const s = summarize(await grab(2000)); beep(880,.08,true);
+  return s && {...s, fy:real};
+}
+function endCal(){ $("#cal").hidden = true; cal.active = false; S.busy = false; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+function fail(msg){ endCal(); const m = $("#msg"); if(m){ m.textContent = msg; m.style.color = "var(--bad)"; } const g = $("#go"); if(g){ g.disabled = false; g.textContent = "Recommencer"; } }
+
+async function runCalibration(){
+  if(S.busy) return; S.busy = true; S.cancel = false;
+  $("#cal").hidden = false; $("#calStop").onclick = ()=>{ S.cancel = true; };
+  try{ await document.documentElement.requestFullscreen(); }catch(e){}
+  const sc = currentScreen(), st = setupOf(), th = st.tilt;
+  const tn = a => Math.tan(a*RAD), at = x => Math.atan(x)*DEG;
+  const avgV = (arr, k) => { const v=[0,0,0]; arr.forEach(s=>{v[0]+=s[k][0];v[1]+=s[k][1];v[2]+=s[k][2];}); const n=Math.hypot(...v); return v.map(x=>x/n); };
+  for(let i=3;i>0;i--){ calMsg("i-back", "Asseyez-vous bien droit", "Dos contre le dossier, épaules relâchées, comme pour bien travailler.", i); await wait(1000); if(S.cancel) return fail("Mesure annulée."); }
+
+  let K = null, camBelowK = null;
+  if(st.cam !== "top"){
+    // Cible précise : l'objectif de la caméra du MacBook
+    const where = st.cam === "below" ? "en dessous de cet écran" : "à côté de cet écran";
+    for(let i=3;i>0;i--){ calMsg("i-cam", "Regardez la caméra du MacBook", `Le petit point noir au-dessus de l'écran du MacBook, ${where}.`, i); await wait(1000); if(S.cancel) return fail("Mesure annulée."); }
+    calMsg("i-cam", "Fixez la caméra… ne bougez plus", "", "●");
+    K = summarize(await grab(2500)); beep(660,.1,true);
+    if(!K) return fail("Visage pas assez visible en regardant la caméra. Recommencez.");
+    // Angle de la caméra sous l'horizontale = inclinaison de son écran − élévation de l'œil dans l'image
+    camBelowK = th - elev(avgV(K.sm, "c"));
+  }
+  calMsg("i-face", "Regardez le rond", "", ""); await wait(1000);
+  const C = await lookAt(.5); if(S.cancel) return fail("Mesure annulée.");
+  let T = null, Bt = null;
+  if(st.cam !== "top"){
+    T = await lookAt(.04); if(S.cancel) return fail("Mesure annulée.");
+    Bt = await lookAt(.96); if(S.cancel) return fail("Mesure annulée.");
+  }
+  endCal();
+  if(!C || (st.cam !== "top" && (!T || !Bt))) return fail("Visage perdu pendant la mesure. Vérifiez la lumière et recommencez.");
+  if(C.sd > 4) return fail("Vous avez bougé en regardant le rond. Restez immobile 2 secondes.");
+
+  // Référence de posture : assis droit en regardant le centre de l'écran
+  const ref = C.sm, pm = k => { const v = ref.filter(s=>s[k]!=null).map(s=>s[k]); return v.length ? mean(v) : null; };
+  const one = {f0:avgV(ref, "raw"), flip:1, dist:mean(ref.map(s=>s.dist)), neck:pm("neck"), tilt:pm("tilt"), shY:pm("shY"), eaY:pm("eaY"),
+    head0:C.head, eye0:C.eye, ev0:pm("ev"), fh0:pm("fh"), roll0:pm("roll"), yaw0:pm("yaw"), ratio0:pm("ratio"), lean0:pm("lean"), twist0:pm("twist"), squint0:pm("squint"), blink0:pm("blink"), theta:th, thetaSrc:st.tiltSrc, mode: st.cam === "top" ? "camera" : "regard"};
+  let doubt = false, err = 0;
+  if(st.cam === "top"){
+    const c0 = avgV(ref, "c"), D = one.dist, camBelow = th - elev(c0);
+    one.sTop = at(tn(camBelow) + CAM_GAP_CM/D); one.sDist = D;
+  } else {
+    const down = P => camBelowK + (K.head - P.head) + (P.eye - K.eye);   // regard sous l'horizontale
+    const gT = down(T), gB = down(Bt), gC = down(C);
+    if(gB - gT < 4) return fail("Je n'ai pas vu votre regard descendre entre le rond du haut et celui du bas. Recommencez en suivant bien le rond.");
+    const D = (Bt.fy - T.fy)*sc.h/(tn(gB) - tn(gT));
+    if(!(D > 30 && D < 140)) return fail("Mesure incohérente. Vérifiez l'écran choisi à l'étape 1 et la position de la caméra, puis recommencez.");
+    one.sDist = D; one.sTop = at(tn(gT) - T.fy*sc.h/D);
+    err = Math.round(Math.abs(gC - at(tn(one.sTop) + C.fy*sc.h/D))); doubt = err > 6;
+    Object.assign(one, {camBelowK, kHead:K.head, kEye:K.eye});
+  }
+  { const cc = applyCorr(one.sTop, one.sDist); one.sTop = cc.top; one.sDist = cc.D; }
+  one.err = err; one.doubt = doubt;
+  addToSeries(sc.key, one);
+  go("result");
+}
+
+/* ================= Réglage guidé en direct ================= */
+let G = null;
+let LR = null;
+function liveResultTick(m){
+  if(!m){ setBadge("", "Visage non visible"); return; }
+  const e = guideEstimate(m, LR, $("#lrDot"));
+  LR.top = LR.top == null ? e.top : LR.top + 0.2*(e.top - LR.top); LR.D = e.D;
+  const r = screenAdvice(LR.top, LR.D, LR.sc.h), now = Date.now();
+  setBadge(r.dir ? "warn" : "good", "En direct");
+  if(now - LR.lastDraw > 250){
+    LR.lastDraw = now;
+    const h = $("#lrHero"), g = $("#lrGauge");
+    if(h) h.innerHTML = heroHTML(r, false);
+    if(g) g.innerHTML = gaugeSVG(LR.top, LR.D, LR.sc.h, r);
+    const f = $("#lrFacts"); if(f) f.innerHTML = factsHTML(r, LR.D, LR.sc);
+  }
+  if(r.dir !== 0){
+    LR.okSince = 0; LR.saidOk = false;
+    if(r.cm !== LR.lastCm && now - LR.lastSay > 2200){ LR.lastSay = now; LR.lastCm = r.cm; say(r.dir > 0 ? `Encore ${r.cm} centimètres vers le haut` : `Descendez de ${r.cm} centimètres`, LR.voice); }
+    return;
+  }
+  if(!LR.okSince) LR.okSince = now;
+  if(!LR.saidOk){ LR.saidOk = true; LR.lastSay = now; say("C'est bon, ne bougez plus.", LR.voice); }
+  if(now - LR.okSince > 2500){
+    const key = LR.sc.key, one = {...LR.b, sTop:LR.top, sDist:LR.D, doubt:false}, v = LR.voice;
+    LR = null; say("Parfait. L'écran est à la bonne hauteur.", v);
+    S.series[key] = []; addToSeries(key, one); go("result");
+  }
+}
+function say(t, on = G?.voice){ if(!on || !window.speechSynthesis) return; try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = "fr-FR"; u.rate = 1.05; speechSynthesis.speak(u); }catch(e){} }
+async function startGuide(){
+  const b = curBase(), sc = currentScreen(); if(!b || !S.running) return;
+  // Caméra sur l'écran : elle bouge avec lui, on suit sa position. Caméra à côté : on suit le regard vers un rond au centre.
+  G = {b, sc, mode: b.mode === "regard" && b.kHead != null ? "dot" : "cam", top:null, lastSay:0, lastCm:null, okSince:0, voice:true, saidOk:false};
+  const box = $("#guideBox"); box.hidden = false; box.className = "cal guide";
+  try{ await document.documentElement.requestFullscreen(); }catch(e){}
+  $("#gDot").hidden = G.mode !== "dot"; $("#gCheck").hidden = true;
+  $("#gSub").textContent = G.mode === "dot" ? "Regardez le rond pendant que vous montez ou descendez l'écran." : "Bougez l'écran doucement en regardant cette page. Gardez la même inclinaison.";
+  $("#gVoice").checked = true; $("#gVoice").onchange = e=>{ G.voice = e.target.checked; };
+  $("#gStop").onclick = ()=>endGuide();
+  unlockAudio(); say(G.mode === "dot" ? "Regardez le rond et bougez l'écran doucement." : "Bougez l'écran doucement.");
+}
+function endGuide(){
+  if(!G) return;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  G = null; $("#guideBox").hidden = true; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+}
+function guideEstimate(m, ctx = G, dotEl = $("#gDot")){
+  const b = ctx.b, h = ctx.sc.h, tn = a => Math.tan(a*RAD), at = x => Math.atan(x)*DEG;
+  if(ctx.mode === "dot"){
+    const g = b.camBelowK + (b.kHead - m.head) + (m.eye - b.kEye);
+    const D = b.sDist * m.dist / b.dist, fy = dotFraction(dotEl);
+    return applyCorr(at(tn(g) - fy*h/D), D);
+  }
+  const D = m.dist, camBelow = b.theta - elev(m.c);
+  return applyCorr(at(tn(camBelow) + CAM_GAP_CM/D), D);
+}
+function guideShow(r){
+  const box = $("#guideBox"), ok = r.dir === 0;
+  box.className = "cal guide" + (ok ? " ok" : "");
+  $("#gArrow").setAttribute("href", ok ? "#i-check" : r.dir > 0 ? "#i-up" : "#i-down");
+  $("#gNum").textContent = ok ? "OK" : `${r.cm} cm`;
+  $("#gTxt").textContent = ok ? "C'est bon, ne bougez plus" : r.dir > 0 ? "Montez encore" : "Descendez";
+  const span = 55, pos = a => Math.max(0, Math.min(100, (a + 10)/span*100));
+  $("#gZone").style.top = pos(r.lo) + "%"; $("#gZone").style.height = (pos(r.hi) - pos(r.lo)) + "%";
+  $("#gMark").style.top = pos(r.center) + "%";
+}
+function guideTick(m){
+  if(!G) return;
+  if(!m){ $("#gTxt").textContent = "Visage non visible"; return; }
+  const e = guideEstimate(m);
+  G.top = G.top == null ? e.top : G.top + 0.2*(e.top - G.top); G.D = e.D;
+  const r = screenAdvice(G.top, G.D, G.sc.h), now = Date.now();
+  guideShow(r);
+  if(r.dir !== 0){
+    G.okSince = 0; G.saidOk = false;
+    if(r.cm !== G.lastCm && now - G.lastSay > 2200){ G.lastSay = now; G.lastCm = r.cm; say(r.dir > 0 ? `Encore ${r.cm} centimètres vers le haut` : `Descendez de ${r.cm} centimètres`); }
+    return;
+  }
+  if(!G.okSince) G.okSince = now;
+  if(!G.saidOk){ G.saidOk = true; G.lastSay = now; say("C'est bon, ne bougez plus."); }
+  if(now - G.okSince > 2500) guideDone(G.top, G.D);
+}
+function guideDone(top, D){
+  const b = G.b, key = G.sc.key;
+  say("Parfait. L'écran est à la bonne hauteur.");
+  S.series[key] = []; addToSeries(key, {...b, sTop:top, sDist:D, doubt:false});
+  $("#gTxt").textContent = "Parfait !"; $("#gNum").textContent = "OK";
+  const g = G; G = null;
+  setTimeout(()=>{ G = g; endGuide(); go("result"); }, 1500);
+}
+
+/* ================= Fiabilité : plusieurs mesures, valeur médiane ================= */
+function recentSeries(){ const k = currentScreen().key; return (S.series[k] || []).filter(x => Date.now() - x.at < 45*60e3); }
+function addToSeries(key, one){
+  const ser = (S.series[key] || []).filter(x => Date.now() - x.at < 45*60e3);
+  ser.push({sTop:one.sTop, sDist:one.sDist, err:one.err, doubt:one.doubt, at:Date.now()});
+  S.series[key] = ser.slice(-5); store.set("nd5_series", S.series);
+  const s = S.series[key];
+  S.bases[key] = {...one, sTop:median(s.map(x=>x.sTop)), sDist:median(s.map(x=>x.sDist)), n:s.length};
+  store.set("nd5_bases", S.bases);
+}
+function reliability(){
+  const ser = recentSeries(), sc = currentScreen(), b = curBase();
+  const src = b?.thetaSrc === "mesure" ? "angle mesuré (± 1°)" : "inclinaison choisie sur le dessin (± 5°)";
+  if(!ser.length) return {n:0, agree:false, text:"Mesure ancienne : refaites-en une pour la confirmer."};
+  if(b?.mode === "camera") return {n:ser.length, agree:true, text:`Calcul basé sur la caméra et l'${src}.`};
+  const ds = ser.map(x=>screenAdvice(x.sTop, x.sDist, sc.h).delta);
+  const spread = Math.round(Math.max(...ds) - Math.min(...ds));
+  if(ser.length === 1) return {n:1, agree:!ser[0].doubt, text: ser[0].doubt ? `Contrôle imparfait (écart ${ser[0].err}°). Une 2e mesure confirmera le conseil.` : `Mesure contrôlée par le rond central (écart ${ser[0].err}°).`};
+  if(spread <= AGREE_CM) return {n:ser.length, agree:true, text:`${ser.length} mesures concordantes (écart ${spread} cm).`};
+  return {n:ser.length, agree:false, text:`${ser.length} mesures différentes (écart ${spread} cm). Faites-en une de plus, bien immobile.`};
+}
+
+/* ================= Règle unique : verdict ET schéma ================= */
+function screenAdvice(top, D, h){
+  const [lo, hi] = S.prefs.progressive ? [18, 30] : [10, 20];
+  const center = Math.atan(Math.tan(top*RAD) + h/(2*D))*DEG;
+  let tc = Math.min(hi-2, Math.max(lo+2, center));
+  let topT = Math.atan(Math.tan(tc*RAD) - h/(2*D))*DEG;
+  if(topT < 0) topT = 0;
+  const inZone = center >= lo && center <= hi && top >= -1;
+  const delta = inZone ? 0 : D*(Math.tan(top*RAD) - Math.tan(topT*RAD));
+  const cm = Math.round(Math.abs(delta)), dir = cm < 2 ? 0 : (delta > 0 ? 1 : -1);
+  const cls = dir === 0 ? "good" : cm > 8 ? "bad" : "warn";
+  const title = dir > 0 ? `montez-le de ${cm} cm` : dir < 0 ? `baissez-le de ${cm} cm` : "bien placé";
+  return {center, lo, hi, topT, dir, cm, cls, title, delta};
+}
+const distClass = d => (d < 45 || d > 85) ? "warn" : "good";
+function factsHTML(r, D, sc){
+  return `<div class="facts">
+    <div class="fact ${r.cls}"><span class="n">${Math.round(r.center)}°</span><span class="t">regard vers le centre<br>conseillé ${r.lo}–${r.hi}°</span></div>
+    <div class="fact ${distClass(D)}"><span class="n">${Math.round(D)} cm</span><span class="t">distance<br>conseillé 50–70</span></div>
+    <div class="fact"><span class="n" style="font-size:.95rem">${sc.label.replace(/ \(.+\)/,"").replace("Écran externe ","Écran ")}</span><span class="t">écran</span></div>
+  </div>`;
+}
+function heroHTML(r, provisional){
+  const icon = r.dir > 0 ? "i-up" : r.dir < 0 ? "i-down" : "i-check";
+  const big = r.dir > 0 ? "Montez l'écran" : r.dir < 0 ? "Baissez l'écran" : "Écran bien placé";
+  const sub = r.dir ? `<div class="num">de ${r.cm} cm environ${provisional ? " · à confirmer" : ""}</div>` : `<div class="muted">${provisional ? "À confirmer par une 2e mesure." : "Rien à changer."}</div>`;
+  return `<div class="hero ${r.cls}"><div class="disc">${ico(icon)}</div><div><div class="big">${big}</div>${sub}</div></div>`;
+}
+function gaugeSVG(top, D, h, r){
+  const ex = 40, W = 360, H = 210, tn = a => Math.tan(a*RAD);
+  const yTop = D*tn(top), yT = D*tn(r.topT), zx = D*1.25;
+  const ys = [0, yTop, yTop+h, zx*tn(r.lo), zx*tn(r.hi), ...(r.dir ? [yT, yT+h] : [])];
+  const minY = Math.min(...ys) - 5, maxY = Math.max(...ys) + 5;
+  const k = Math.min((W-ex-60)/zx, (H-24)/(maxY-minY));
+  const X = ex + D*k, XZ = ex + zx*k, Y = v => 12 + (v - minY)*k;
+  const col = r.dir ? "var(--warn)" : "var(--good)", cY = Y(yTop + h/2);
+  let move = "";
+  if(r.dir){
+    const a = cY, b = Y(yT + h/2);
+    move = `<rect x="${X-6}" y="${Y(yT)}" width="12" height="${h*k}" rx="2" fill="none" stroke="var(--good)" stroke-width="2.5" stroke-dasharray="5 3"/>
+      <line x1="${X+26}" y1="${a}" x2="${X+26}" y2="${b + (b>a?-7:7)}" stroke="${col}" stroke-width="3.5" marker-end="url(#ah)"/>
+      <text x="${X+36}" y="${(a+b)/2+5}" fill="${col}" font-size="16" font-weight="700" font-family="JetBrains Mono,monospace">${r.dir>0?"+":"−"}${r.cm} cm</text>`;
+  }
+  return `<svg class="gauge" viewBox="0 0 ${W} ${H}" role="img" aria-label="Schéma de profil de la position de l'écran">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${col}"/></marker></defs>
+    <path d="M${ex} ${Y(0)} L${XZ} ${Y(zx*tn(r.lo))} L${XZ} ${Y(zx*tn(r.hi))} Z" fill="color-mix(in srgb, var(--good) 20%, transparent)"/>
+    <line x1="${ex}" y1="${Y(0)}" x2="${W-4}" y2="${Y(0)}" stroke="var(--muted)" stroke-dasharray="4 4"/>
+    <text x="${ex+6}" y="${Y(0)-6}" fill="var(--muted)" font-size="11" font-family="Inter,sans-serif">vos yeux</text>
+    <circle cx="${ex-16}" cy="${Y(0)}" r="14" fill="none" stroke="var(--ink)" stroke-width="2"/>
+    <circle cx="${ex-8}" cy="${Y(0)-1}" r="2.6" fill="var(--ink)"/>
+    <line x1="${ex-8}" y1="${Y(0)}" x2="${X}" y2="${cY}" stroke="${col}" stroke-width="1.5"/>
+    <rect x="${X-6}" y="${Y(yTop)}" width="12" height="${h*k}" rx="2" fill="${r.dir ? "var(--ink)" : "var(--good)"}"/>
+    <circle cx="${X}" cy="${cY}" r="4.5" fill="${col}" stroke="var(--surface)" stroke-width="1.5"/>
+    ${move}
+  </svg>
+  <p class="note" style="text-align:center">${r.dir ? "Noir : votre écran · pointillés : où le mettre · vert : zone conseillée" : "Le centre de votre écran est dans la zone verte conseillée"}</p>`;
+}
+
+/* ================= Suivi ================= */
+function startWatch(){
+  const b = curBase(); if(!b) return go("measure");
+  S.flip = 1;
+  S.ema = {dist:b.dist, flex:0, neck:b.neck, tilt:b.tilt, shY:b.shY, eaY:b.eaY, ev:b.ev0 ?? null, roll:b.roll0 ?? 0, yaw:b.yaw0 ?? 0, ratio:b.ratio0 ?? null, lean:b.lean0 ?? null, twist:b.twist0 ?? null, squint:0, hand:0};
+  S.watch = {start:Date.now(), blinks:[], eyeClosed:false, present:0, good:0, issueSince:0, lastAlert:0, lastTickAt:Date.now(), sinceBreak:0, breakDue:false, absentSince:0, absentCounted:false};
+  S.watching = true; $("#watchDot").hidden = false;
+  go("watch");
+}
+// Toutes les mesures, comparées à votre position de référence (assis droit pendant la mesure)
+function metrics(b){
+  const e = S.ema, W = S.watch, dif = (v, v0) => v != null && v0 != null ? v - v0 : null;
+  const sink = b.ev0 != null && b.fh0 && e.ev != null ? (e.ev - b.ev0)/b.fh0 : null;
+  const neckDrop = b.neck && e.neck != null ? 1 - e.neck/b.neck : null;
+  const shUp = (b.shY ?? 0) - (e.shY ?? 0), headDown = (e.eaY ?? 0) - (b.eaY ?? 0);
+  const prot = e.ratio != null && b.ratio0 ? e.ratio/b.ratio0 - 1 : null;
+  const closer = e.dist < b.dist*0.94;
+  const blinkRate = W && Date.now() - W.start > 60000 ? W.blinks.length : null;
+  return {
+    flex: e.flex, roll: dif(e.roll, b.roll0 ?? 0), yaw: dif(e.yaw, b.yaw0), sink,
+    fwdHead: prot != null && closer ? prot : (prot != null ? 0 : null),
+    rounded: prot != null && !closer ? prot : (prot != null ? 0 : null),
+    tilt: dif(e.tilt, b.tilt), shrug: neckDrop != null ? (shUp > headDown ? neckDrop : 0) : null,
+    slumpNeck: neckDrop != null && shUp <= headDown ? neckDrop : 0,
+    lean: dif(e.lean, b.lean0), twist: dif(e.twist, b.twist0),
+    dist: b.sDist * e.dist / b.dist, distRatio: e.dist/b.dist, blinkRate, squint: (b.squint0 ?? W?.sq0) != null && e.squint != null ? Math.max(0, e.squint - (b.squint0 ?? W.sq0)) : null, hand: e.hand
+  };
+}
+const A = Math.abs;
+function issues(b){
+  const x = metrics(b), out = [];
+  if((x.sink ?? 0) > .3 || x.slumpNeck > .15) out.push({k:"slouch", i:"i-slouch", t:"Redressez-vous", s:"Vous vous enfoncez dans le siège. Fesses au fond, dos contre le dossier.", a:"Fesses au fond, dos au dossier", v:x.sink != null ? `${Math.max(0, Math.round(x.sink*19))} cm plus bas` : ""});
+  if(x.hand > .6) out.push({k:"hand", i:"i-hand", t:"Main sous le menton", s:"Ne portez pas la tête avec la main : avant-bras posés.", a:"Posez les avant-bras", v:""});
+  if((x.fwdHead ?? 0) > .08) out.push({k:"fwdhead", i:"i-forward", t:"Tête trop en avant", s:"Rentrez le menton, oreilles au-dessus des épaules.", a:"Rentrez le menton", v:`+${Math.round(x.fwdHead*100)} %`});
+  if((x.rounded ?? 0) > .08) out.push({k:"round", i:"i-shoulders", t:"Épaules enroulées", s:"Ouvrez la poitrine, omoplates vers l'arrière.", a:"Omoplates vers l'arrière", v:`+${Math.round(x.rounded*100)} %`});
+  if(A(x.roll ?? 0) > 8) out.push({k:"roll", i:"i-roll", t:"Tête penchée sur le côté", s:"Redressez la tête : les yeux à l'horizontale.", a:"Yeux à l'horizontale", v:`${Math.round(A(x.roll))}°`});
+  if(x.flex > 12) out.push({k:"flex", i:"i-head-down", t:"Relevez la tête", s:"Le regard descend, pas le cou.", a:"Baissez les yeux, pas le cou", v:`${Math.round(x.flex)}°`});
+  else if(x.flex < -10) out.push({k:"ext", i:"i-chin", t:"Baissez le menton", s:"Menton légèrement rentré.", a:"Rentrez un peu le menton", v:`${Math.round(A(x.flex))}°`});
+  if(A(x.yaw ?? 0) > 15) out.push({k:"yaw", i:"i-rotate", t:"Tête tournée", s:"Placez l'écran bien en face de vous.", a:"Mettez l'écran en face", v:`${Math.round(A(x.yaw))}°`});
+  if(A(x.lean ?? 0) > .18) out.push({k:"lean", i:"i-tilt", t:"Buste penché sur le côté", s:"Asseyez-vous au centre du siège.", a:"Centrez-vous sur le siège", v:`${Math.round(A(x.lean)*40)} cm`});
+  if(A(x.twist ?? 0) > 15) out.push({k:"twist", i:"i-rotate", t:"Buste tourné", s:"Épaules face à l'écran.", a:"Épaules face à l'écran", v:`${Math.round(A(x.twist))}°`});
+  if(A(x.tilt ?? 0) > 5) out.push({k:"tilt", i:"i-tilt", t:"Épaules de travers", s:"Les deux avant-bras en appui.", a:"Appui des 2 avant-bras", v:`${Math.round(A(x.tilt))}°`});
+  if((x.shrug ?? 0) > .15) out.push({k:"shrug", i:"i-shrug", t:"Relâchez les épaules", s:"Épaules basses. Bureau ou accoudoirs trop hauts ?", a:"Laissez tomber les épaules", v:""});
+  if(x.distRatio < .85) out.push({k:"close", i:"i-forward", t:"Trop près de l'écran", s:"Reculez : 50 à 70 cm.", a:"Reculez à 50–70 cm", v:`${Math.round(x.dist)} cm`});
+  if((x.squint ?? 0) > .25) out.push({k:"squint", eye:true, i:"i-glasses", t:"Vous plissez les yeux", s:"Grossissez le texte (⌘ +) ou réglez la luminosité.", a:"Grossissez le texte (⌘ +)", v:""});
+  if(x.blinkRate != null && x.blinkRate < 8) out.push({k:"blink", eye:true, i:"i-horizon", t:"Clignez des yeux", s:"Regardez au loin 20 s en clignant plusieurs fois.", a:"Regardez au loin 20 s", v:`${x.blinkRate}/min`});
+  return out;
+}
+// Tableau de bord : chaque mesure avec sa valeur et son état
+function monitorTiles(b){
+  const x = metrics(b), st = (v, w, bad) => v == null ? "" : v >= bad ? "bad" : v >= w ? "warn" : "good";
+  const deg = v => v == null ? "—" : Math.round(A(v)) + "°", pct = v => v == null ? "—" : Math.max(0, Math.round(v*100)) + " %";
+  return [
+    ["i-head-down", "Tête vers le bas", x.flex == null ? "—" : Math.max(0, Math.round(x.flex)) + "°", st(x.flex, 8, 12)],
+    ["i-roll", "Tête sur le côté", deg(x.roll), st(A(x.roll ?? 0), 5, 8)],
+    ["i-rotate", "Tête tournée", deg(x.yaw), x.yaw == null ? "" : st(A(x.yaw), 10, 15)],
+    ["i-forward", "Tête en avant", pct(x.fwdHead), x.fwdHead == null ? "" : st(x.fwdHead, .05, .08)],
+    ["i-tilt", "Épaules de niveau", deg(x.tilt), x.tilt == null ? "" : st(A(x.tilt), 3, 5)],
+    ["i-shrug", "Épaules relevées", pct(x.shrug), x.shrug == null ? "" : st(x.shrug, .1, .15)],
+    ["i-shoulders", "Épaules enroulées", pct(x.rounded), x.rounded == null ? "" : st(x.rounded, .05, .08)],
+    ["i-slouch", "Dos affaissé", x.sink == null ? "—" : Math.max(0, Math.round(x.sink*19)) + " cm", x.sink == null ? "" : st(Math.max(x.sink, x.slumpNeck*2), .18, .3)],
+    ["i-tilt", "Buste penché", x.lean == null ? "—" : Math.round(A(x.lean)*40) + " cm", x.lean == null ? "" : st(A(x.lean), .1, .18)],
+    ["i-rotate", "Buste tourné", deg(x.twist), x.twist == null ? "" : st(A(x.twist), 10, 15)],
+    ["i-screen", "Distance écran", Math.round(x.dist) + " cm", x.distRatio < .85 || x.dist < 45 || x.dist > 85 ? "warn" : "good"],
+    ["i-hand", "Main au visage", x.hand > .6 ? "oui" : "non", x.hand > .6 ? "bad" : "good"],
+    ["i-horizon", "Clignements", x.blinkRate == null ? "1 min…" : x.blinkRate + " /min", x.blinkRate == null ? "" : x.blinkRate < 8 ? "warn" : "good"],
+    ["i-glasses", "Yeux plissés", x.squint == null ? "2 min…" : x.squint < .12 ? "non" : "+" + Math.round(x.squint*100) + " %", x.squint == null ? "" : st(x.squint, .15, .25)]
+  ].map(([i, l, v, c]) => `<div class="mt ${c}">${ico(i)}<span class="l">${l}</span><span class="v">${v}</span></div>`).join("");
+}
+function setFact(id, txt, cls){ const el = $(id); if(!el) return; el.className = "fact " + (cls||""); el.querySelector(".n").textContent = txt; }
+function watchTick(m){
+  const now = Date.now(), W = S.watch, dt = Math.min(2, (now - W.lastTickAt)/1000); W.lastTickAt = now;
+  const b = curBase() || Object.values(S.bases)[0]; if(!b) return;
+  const live = $("#live");
+  if(!m){
+    if(!W.absentSince) W.absentSince = now;
+    // une absence de 3 minutes compte comme une pause
+    if(now - W.absentSince > 180e3 && !W.absentCounted){ W.absentCounted = true; W.sinceBreak = 0; W.breakDue = false; hist().b++; const bx = $("#breakBox"); if(bx) bx.innerHTML = ""; }
+    W.issueSince = 0; setBadge("", "Absent");
+    if(live){ live.className = "hero"; $("#liveIco").setAttribute("href", "#i-face"); $("#lv").textContent = "En pause"; $("#lp").textContent = W.absentCounted ? "Pause comptée. Bon retour !" : "Personne devant l'écran."; }
+    return;
+  }
+  W.absentSince = 0; W.absentCounted = false;
+  smooth("flex", S.flip*(elev(b.f0) - m.head), .25);
+  smooth("dist", m.dist, .1); smooth("neck", m.neck, .15); smooth("tilt", m.tilt, .15); smooth("shY", m.shY, .15); smooth("eaY", m.eaY, .15); smooth("ev", m.ev, .2); smooth("roll", m.roll, .25);
+  smooth("yaw", m.yaw, .2); smooth("ratio", m.ratio, .15); smooth("lean", m.lean, .15); smooth("twist", m.twist, .15); smooth("squint", m.squint, .04); smooth("hand", m.handFace, .25);
+  if(m.squint != null && (W.sqS = W.sqS || []).length < 900) W.sqS.push([m.squint, m.blink ?? 0]);
+  if(b.squint0 == null && W.sq0 == null && now - W.start > 120000 && W.sqS.length > 200){ W.sq0 = median(W.sqS.map(x=>x[0])); W.bl0 = median(W.sqS.map(x=>x[1])); }
+  if(m.blink != null){ const closed = m.blink > Math.max(.45, (b.blink0 ?? W.bl0 ?? 0) + .3); if(W.eyeClosed && !closed) W.blinks.push(now); W.eyeClosed = closed; W.blinks = W.blinks.filter(t => now - t < 60000); }
+  W.present += dt; W.sinceBreak += dt;
+  const all = issues(b), is = all.filter(x=>!x.eye), eyes = all.filter(x=>x.eye), ok = !is.length; if(ok) W.good += dt;
+  recordHist(dt, ok);
+  const cls = ok ? "good" : (is.length > 1 ? "bad" : "warn");
+  setBadge(cls, ok ? "Bonne posture" : is[0].t);
+  if(live){
+    live.className = "hero " + cls;
+    $("#liveIco").setAttribute("href", "#" + (ok ? "i-check" : is[0].i));
+    $("#lv").textContent = ok ? "Bonne posture" : is[0].t;
+    $("#lp").textContent = (ok ? "Continuez ainsi." : is[0].s) + (is.length > 1 ? ` Aussi : ${is.slice(1).map(x=>x.t.toLowerCase()).join(", ")}.` : "") + (eyes.length ? ` Yeux : ${eyes[0].t.toLowerCase()}.` : "");
+    const hd = Math.max(S.ema.flex, Math.abs((S.ema.roll ?? 0) - (b.roll0 ?? 0))*1.5); setFact("#f-flex", Math.max(0, Math.round(Math.max(S.ema.flex, Math.abs((S.ema.roll ?? 0) - (b.roll0 ?? 0))))) + "°", hd > 12 ? "bad" : hd > 7 ? "warn" : "good");
+    const sD = b.sDist * S.ema.dist / b.dist; setFact("#f-dist", Math.round(sD) + " cm", distClass(sD));
+    const h = hist(), pct = h.p > 5 ? Math.round(100*h.g/h.p) : null;
+    setFact("#f-pct", pct==null ? "—" : pct + " %", pct==null ? "" : pct >= 75 ? "good" : pct >= 50 ? "warn" : "bad");
+    $("#pbar").style.width = (pct||0) + "%";
+    if(now - (W.lastMon || 0) > 500){ W.lastMon = now; const mo = $("#mon"); if(mo) mo.innerHTML = monitorTiles(b); }
+  }
+  if(!ok){
+    if(!W.issueSince) W.issueSince = now;
+    if(now - W.issueSince > S.prefs.delay*1000 && now - W.lastAlert > 120000){ W.lastAlert = now; hist().a++; alertUser(is[0]); }
+  } else { W.issueSince = 0; document.title = "Nuque Droite"; }
+  // yeux : rappel doux, au plus toutes les 10 minutes
+  if(eyes.length && now - (W.lastEye || 0) > 600000 && now - W.start > 120000){ W.lastEye = now; notify(eyes[0].t, eyes[0].s); }
+  if(W.sinceBreak > 30*60 && !W.breakDue){ W.breakDue = true; playSound(S.prefs.sound, {t:"Pause", a:"Deux minutes de mouvement"}); notify("Pause active", "2 minutes de mouvement."); showBreak(); }
+  if(ok) updatePip(cls, "Bonne posture", eyes.length ? "Yeux : " + eyes[0].a.toLowerCase() : "Continuez ainsi");
+  else updatePip(cls, is[0].t + (is[0].v ? " · " + is[0].v : ""), is[0].a + (is.length > 1 ? ` (+${is.length-1} autre${is.length > 2 ? "s" : ""})` : ""));
+}
+function showBreak(){
+  const box = $("#breakBox"); if(!box) return;
+  box.innerHTML = `<div class="break"><h2>Pause 2 min</h2>
+    <div class="tiles">
+      <div class="tile">${ico("i-chin")}Menton rentré<span class="s">5 s × 8</span></div>
+      <div class="tile">${ico("i-rotate")}Tourner la tête<span class="s">× 5 par côté</span></div>
+      <div class="tile">${ico("i-shoulders")}Rouler les épaules<span class="s">× 10</span></div>
+      <div class="tile">${ico("i-horizon")}Regarder au loin<span class="s">20 s</span></div>
+    </div>
+    <div class="btns"><button class="primary" id="bdone">C'est fait</button></div>
+    <p class="note">Ou levez-vous 3 minutes : l'app compte l'absence comme une pause.</p></div>`;
+  $("#bdone").onclick = ()=>{ box.innerHTML = ""; S.watch.sinceBreak = 0; S.watch.breakDue = false; hist().b++; saveHist(); };
+}
+
+/* ================= Historique ================= */
+const dayKey = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function hist(k=dayKey()){ return S.hist[k] || (S.hist[k] = {p:0, g:0, h:{}, a:0, b:0, pain:null}); }
+function recordHist(dt, ok){
+  const h = hist(), hr = new Date().getHours();
+  h.p += dt; if(ok) h.g += dt;
+  const x = h.h[hr] || (h.h[hr] = [0,0]); x[0] += dt; if(ok) x[1] += dt;
+}
+function saveHist(){
+  const keys = Object.keys(S.hist).sort(); while(keys.length > 90) delete S.hist[keys.shift()];
+  store.set("nd4_hist", S.hist);
+}
+// toutes les ~10 s : sauvegarde et bilans de mi-journée / fin de journée
+function periodic(){
+  if(S.watching) saveHist();
+  const now = new Date(), t = now.getHours()*60 + now.getMinutes(), h = hist(), sent = S.prefs.recap || {};
+  for(const [slot, at] of [["midi", 750], ["soir", 1050]]){
+    const id = dayKey()+slot;
+    if(S.watching && t >= at && t < at+60 && !sent[id] && h.p > 600){
+      sent[id] = 1; S.prefs.recap = sent; savePrefs();
+      notify(slot === "midi" ? "Bilan de la matinée" : "Bilan de la journée", `${Math.round(100*h.g/h.p)} % du temps en bonne posture · ${h.b} pause(s).`);
+    }
+  }
+}
+const pctOf = d => d && d.p > 300 ? Math.round(100*d.g/d.p) : null;
+function renderHistory(){
+  saveHist();
+  const today = hist(), tp = pctOf(today), days = [];
+  for(let i=6;i>=0;i--){ const d = new Date(); d.setDate(d.getDate()-i); days.push({k:dayKey(d), d, v:S.hist[dayKey(d)]}); }
+  // pire heure sur 14 jours (au moins 20 min de présence)
+  const byH = {}; Object.entries(S.hist).slice(-14).forEach(([,v])=>Object.entries(v.h||{}).forEach(([hr,[p,g]])=>{ const x = byH[hr] || (byH[hr]=[0,0]); x[0]+=p; x[1]+=g; }));
+  const hrs = Object.entries(byH).filter(([,x])=>x[0] > 1200).map(([hr,x])=>({hr:+hr, pct:Math.round(100*x[1]/x[0])}));
+  const worst = hrs.length > 2 ? hrs.reduce((a,b)=> b.pct < a.pct ? b : a) : null;
+  // lien posture ↔ douleur
+  const both = Object.values(S.hist).filter(v=>v.pain!=null && pctOf(v)!=null);
+  let link = null;
+  if(both.length >= 5){
+    const goodD = both.filter(v=>pctOf(v) >= 70), badD = both.filter(v=>pctOf(v) < 70);
+    if(goodD.length && badD.length) link = {g:mean(goodD.map(v=>v.pain)).toFixed(1), b:mean(badD.map(v=>v.pain)).toFixed(1)};
+  }
+  panel.innerHTML = `
+    <div class="btns" style="justify-content:space-between"><h2>Historique</h2><button class="link" id="back">← Retour</button></div>
+    <div class="hero ${tp==null ? "" : tp >= 75 ? "good" : tp >= 50 ? "warn" : "bad"}"><div class="disc">${ico("i-chart")}</div><div><div class="big">${tp==null ? "—" : tp + " %"}</div><div class="muted">du temps en bonne posture aujourd'hui · ${today.a} alerte(s) · ${today.b} pause(s)</div></div></div>
+    <div><h3>Aujourd'hui, heure par heure</h3>${hourChart(today)}</div>
+    <div><h3>7 derniers jours</h3>${weekChart(days)}</div>
+    ${worst ? `<div class="insight">${ico("i-alert")}<span>Votre posture se dégrade surtout vers <b>${worst.hr} h</b> (${worst.pct} %). Prévoyez une pause à ce moment-là.</span></div>` : ""}
+    ${link ? `<div class="insight">${ico("i-pain")}<span>Les jours à 70 % ou plus de bonne posture, votre nuque est notée <b>${link.g}/10</b>, contre <b>${link.b}/10</b> les autres jours.</span></div>` : `<p class="note">Après 5 jours notés, l'app vous montrera si la bonne posture réduit votre douleur.</p>`}
+    <div><h3>Ma nuque aujourd'hui</h3><p class="note">0 = aucune douleur · 10 = très forte</p>
+      <div class="painrow" id="pain">${Array.from({length:11},(_,i)=>`<button data-v="${i}" class="${today.pain===i?"sel":""}">${i}</button>`).join("")}</div></div>
+    <div class="btns"><button class="link danger" id="clear">Effacer l'historique</button><span id="clearOk" hidden><button class="danger" id="clearYes">Oui, tout effacer</button> <button class="link" id="clearNo">Annuler</button></span></div>`;
+  $("#back").onclick = ()=>go(S.step);
+  panel.querySelectorAll("#pain button").forEach(b=>b.onclick = ()=>{ hist().pain = +b.dataset.v; saveHist(); renderHistory(); });
+  $("#clear").onclick = ()=>{ $("#clearOk").hidden = false; };
+  $("#clearNo").onclick = ()=>{ $("#clearOk").hidden = true; };
+  $("#clearYes").onclick = ()=>{ S.hist = {}; saveHist(); renderHistory(); };
+}
+function colorFor(p){ return p >= 75 ? "var(--good)" : p >= 50 ? "var(--warn)" : "var(--bad)"; }
+function hourChart(d){
+  const hours = Object.keys(d.h||{}).map(Number).filter(h=>d.h[h][0] > 60);
+  if(!hours.length) return `<p class="note">Pas encore de données aujourd'hui. Lancez le suivi.</p>`;
+  const from = Math.min(8, ...hours), to = Math.max(19, ...hours), n = to-from+1, W = 360, H = 130, bw = (W-30)/n;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Bonne posture par heure">`;
+  [0,50,100].forEach(v=>{ const y = 10 + (100-v)*0.9; s += `<line x1="26" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="22" y="${y+3}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Inter,sans-serif">${v}</text>`; });
+  for(let h=from; h<=to; h++){
+    const x = 30 + (h-from)*bw, v = d.h[h];
+    if(v && v[0] > 60){ const p = Math.round(100*v[1]/v[0]), bh = p*0.9; s += `<rect x="${x+2}" y="${10+(100-p)*0.9}" width="${bw-4}" height="${Math.max(1,bh)}" rx="2" fill="${colorFor(p)}"/>`; }
+    if((h-from) % 2 === 0) s += `<text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="Inter,sans-serif">${h}h</text>`;
+  }
+  return s + `</svg>`;
+}
+function weekChart(days){
+  const W = 360, H = 150, bw = (W-30)/7, dn = ["dim","lun","mar","mer","jeu","ven","sam"];
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Bonne posture et douleur sur 7 jours">`;
+  [0,50,100].forEach(v=>{ const y = 10 + (100-v)*0.9; s += `<line x1="26" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="22" y="${y+3}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Inter,sans-serif">${v}</text>`; });
+  days.forEach((d,i)=>{
+    const x = 30 + i*bw, p = pctOf(d.v);
+    if(p != null){ const bh = p*0.9; s += `<rect x="${x+5}" y="${10+(100-p)*0.9}" width="${bw-10}" height="${Math.max(1,bh)}" rx="3" fill="${colorFor(p)}"/><text x="${x+bw/2}" y="${10+(100-p)*0.9-4}" text-anchor="middle" font-size="9.5" fill="var(--ink)" font-family="JetBrains Mono,monospace">${p}</text>`; }
+    if(d.v && d.v.pain != null) s += `<circle cx="${x+bw/2}" cy="${H-30}" r="10" fill="var(--pain)"/><text x="${x+bw/2}" y="${H-26.5}" text-anchor="middle" font-size="10" fill="#fff" font-family="JetBrains Mono,monospace">${d.v.pain}</text>`;
+    s += `<text x="${x+bw/2}" y="${H-5}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="Inter,sans-serif">${dn[d.d.getDay()]}</text>`;
+  });
+  return s + `</svg><p class="note">Barres : % de bonne posture · rond violet : douleur notée (0–10)</p>`;
+}
+
+/* ================= Vérification à la règle (vérité terrain) et recalage ================= */
+function corrOf(){ return S.prefs.corr?.[currentScreen().key] || null; }
+function applyCorr(top, D){ const c = corrOf(); return c ? {top: top + c.dTop, D: D*c.kD} : {top, D}; }
+function renderRuler(){
+  const b = curBase(), sc = currentScreen(), c = corrOf(), r0 = S.prefs.rulerLast || {};
+  const dotMode = b && b.mode === "regard" && b.kHead != null;
+  panel.innerHTML = `
+    <div class="btns" style="justify-content:space-between"><h2>Vérifier avec une règle</h2><button class="link" id="back">← Retour</button></div>
+    <svg class="chart" viewBox="0 0 360 170" role="img" aria-label="Les trois mesures à prendre">
+      <path d="M10 150h340" stroke="var(--ink)" stroke-width="3"/>
+      <circle cx="70" cy="48" r="16" fill="none" stroke="var(--ink)" stroke-width="2.5"/><circle cx="80" cy="46" r="2.8" fill="var(--ink)"/>
+      <path d="M70 64v40l-12 46M70 104l20 0" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="250" y="62" width="9" height="56" rx="2" fill="var(--ink)"/><path d="M254 118v32M240 150h28" stroke="var(--ink)" stroke-width="3"/>
+      <path d="M84 46H246" stroke="var(--muted)" stroke-dasharray="4 4"/>
+      <g stroke="var(--accent)" stroke-width="2.2" fill="var(--accent)">
+        <path d="M34 148V50"/><path d="M30 56l4-7 4 7M30 142l4 7 4-7" fill="none"/>
+        <path d="M290 148V64"/><path d="M286 70l4-7 4 7M286 142l4 7 4-7" fill="none"/>
+        <path d="M90 30H246"/><path d="M96 26l-7 4 7 4M240 26l7 4-7 4" fill="none"/>
+      </g>
+      <g font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" text-anchor="middle" fill="var(--accent-ink)">
+        <circle cx="34" cy="100" r="11" fill="var(--accent)"/><text x="34" y="104.5">1</text>
+        <circle cx="290" cy="106" r="11" fill="var(--accent)"/><text x="290" y="110.5">2</text>
+        <circle cx="168" cy="30" r="11" fill="var(--accent)"/><text x="168" y="34.5">3</text>
+      </g>
+      <text x="262" y="58" font-size="10" fill="var(--muted)" font-family="Inter,sans-serif">haut de l'image</text>
+    </svg>
+    <p class="muted">Asseyez-vous droit, dos au dossier, comme pendant la mesure. Mesurez :</p>
+    <div class="rfields">
+      <label class="rf"><span class="num">1</span><span class="grow">Vos yeux, au-dessus du bureau<br><small class="muted">Règle debout sur le bureau, contre la joue : lisez au coin de l'œil.</small></span><input id="rEye" type="number" step="0.5" inputmode="decimal" value="${r0.eye ?? ""}"><span>cm</span></label>
+      <label class="rf"><span class="num">2</span><span class="grow">Le haut de l'image de l'écran, au-dessus du bureau<br><small class="muted">Le bord de la zone allumée, pas le cadre.</small></span><input id="rTop" type="number" step="0.5" inputmode="decimal" value="${r0.top ?? ""}"><span>cm</span></label>
+      <label class="rf"><span class="num">3</span><span class="grow">De vos yeux à l'écran<br><small class="muted">Mètre ruban, à l'horizontale.</small></span><input id="rDist" type="number" step="1" inputmode="decimal" value="${r0.dist ?? ""}"><span>cm</span></label>
+    </div>
+    ${!b ? `<p class="note" style="color:var(--bad)">Faites d'abord une mesure avec l'app (étape 2), puis revenez ici.</p>` : ""}
+    ${dotMode ? `<div class="livebar"><span class="lrdot" id="rDot"></span><span class="grow">Pendant la comparaison, <b>regardez ce rond</b>.</span></div>` : ""}
+    <div class="btns"><button class="primary" id="cmp" ${b ? "" : "disabled"}>Comparer avec l'app (3 s)</button>
+    ${c ? `<button class="link" id="uncal">Annuler le recalage</button>` : ""}</div>
+    <div id="rRes"></div>`;
+  $("#back").onclick = ()=>go(S.step);
+  const u = $("#uncal"); if(u) u.onclick = ()=>{ delete S.prefs.corr[sc.key]; savePrefs(); renderRuler(); };
+  $("#cmp").onclick = compareRuler;
+}
+async function compareRuler(){
+  const num = id => parseFloat(String($(id).value).replace(",", "."));
+  const eye = num("#rEye"), top = num("#rTop"), dist = num("#rDist"), out = $("#rRes");
+  if(!(eye > 5 && eye < 120 && top > 0 && top < 120 && dist > 25 && dist < 150)){ out.innerHTML = `<p class="note" style="color:var(--bad)">Remplissez les 3 mesures en cm.</p>`; return; }
+  S.prefs.rulerLast = {eye, top, dist}; savePrefs();
+  if(!S.running){ const ok = await startCamera(); if(!ok) return; }
+  const b = curBase(), sc = currentScreen();
+  const ctx = {b, sc, mode: b.mode === "regard" && b.kHead != null ? "dot" : "cam"};
+  const btn = $("#cmp"); btn.disabled = true; btn.textContent = "Ne bougez plus…";
+  const sm = await grab(3000);
+  btn.disabled = false; btn.textContent = "Comparer à nouveau";
+  if(sm.length < 6){ out.innerHTML = `<p class="note" style="color:var(--bad)">Visage pas assez visible. Recommencez.</p>`; return; }
+  const est = sm.map(m=>guideEstimate(m, ctx, $("#rDot")));
+  const appTop = mean(est.map(e=>e.top)), appD = mean(est.map(e=>e.D));
+  const c = corrOf() || {kD:1, dTop:0};
+  const rawTop = appTop - c.dTop, rawD = appD / c.kD;               // mesure brute, sans recalage
+  const below = eye - top, trueTop = Math.atan(below/dist)*DEG;      // vérité terrain
+  const appBelow = appD*Math.tan(appTop*RAD);
+  const eB = appBelow - below, eD = appD - dist, good = Math.abs(eB) <= 2 && Math.abs(eD) <= 5;
+  const fmt = v => v >= 0 ? `${Math.round(v)} cm sous vos yeux` : `${Math.round(-v)} cm au-dessus`;
+  out.innerHTML = `
+    <table class="cmp"><tr><th></th><th>Règle</th><th>App</th><th>Écart</th></tr>
+      <tr><td>Haut de l'écran</td><td>${fmt(below)}</td><td>${fmt(appBelow)}</td><td class="${Math.abs(eB)<=2?"ok":"ko"}">${Math.round(Math.abs(eB))} cm</td></tr>
+      <tr><td>Distance</td><td>${Math.round(dist)} cm</td><td>${Math.round(appD)} cm</td><td class="${Math.abs(eD)<=5?"ok":"ko"}">${Math.round(Math.abs(eD))} cm</td></tr></table>
+    <div class="hero ${good ? "good" : "warn"}"><div class="disc">${ico(good ? "i-check" : "i-alert")}</div><div><div class="big" style="font-size:1.5rem">${good ? "L'app mesure juste chez vous" : "L'app se trompe chez vous"}</div><div class="muted">${good ? "Écart de 2 cm au plus sur la hauteur." : `Écart de ${Math.round(Math.abs(eB))} cm sur la hauteur. Recalez-la : vos mesures à la règle feront foi.`}</div></div></div>
+    <div class="btns">${good ? `<button class="primary" id="toRes">Voir le résultat</button>` : `<button class="primary" id="recal">Recaler l'app sur ma règle</button>`}</div>`;
+  const tr = $("#toRes"); if(tr) tr.onclick = ()=>go("result");
+  const rc = $("#recal"); if(rc) rc.onclick = ()=>{
+    S.prefs.corr = S.prefs.corr || {};
+    S.prefs.corr[sc.key] = {kD: dist/rawD, dTop: trueTop - rawTop, at: Date.now()};
+    savePrefs();
+    S.series[sc.key] = []; addToSeries(sc.key, {...b, sTop:trueTop, sDist:dist, doubt:false, err:0});
+    out.innerHTML = `<div class="hero good"><div class="disc">${ico("i-check")}</div><div><div class="big" style="font-size:1.5rem">App recalée</div><div class="muted">Ses prochaines mesures et le suivi en direct tiennent compte de votre règle.</div></div></div><div class="btns"><button class="primary" id="toRes2">Voir le résultat</button></div>`;
+    $("#toRes2").onclick = ()=>go("result");
+  };
+}
+
+/* ================= Réglages ================= */
+function renderSettings(){
+  const P = S.prefs, seg = (k, opts) => opts.map(([v,l])=>`<button class="segb ${P[k]===v?"sel":""}" data-k="${k}" data-v="${v}">${l}</button>`).join("");
+  panel.innerHTML = `
+    <div class="btns" style="justify-content:space-between"><h2>Réglages</h2><button class="link" id="back">← Retour</button></div>
+    <section class="set"><h3>Apparence</h3>
+      <div class="srow"><span>Thème</span><div class="seg">${seg("theme", [["auto","Auto"],["light","Clair"],["dark","Sombre"]])}</div></div>
+      <div class="srow"><span>Couleur</span><div class="swatches">${Object.entries(ACCENTS).map(([k,[l,d,n]])=>`<button class="sw ${P.accent===k?"sel":""}" data-acc="${k}" title="${n}" aria-label="${n}" style="--c1:${l};--c2:${d}"></button>`).join("")}</div></div>
+      <div class="srow"><span>Taille du texte</span><div class="seg">${seg("textSize", [["normal","Normale"],["grand","Grande"]])}</div></div>
+    </section>
+    <section class="set"><h3>Son d'alerte</h3>
+      <div class="sounds">${Object.entries(SOUNDS).map(([k,l])=>`<div class="snd ${P.sound===k?"sel":""}"><button class="snd-pick" data-snd="${k}">${P.sound===k ? ico("i-check") : ico("i-sound")}<span>${l}</span></button>${k !== "aucun" ? `<button class="snd-play" data-play="${k}" aria-label="Écouter ${l}">${ico("i-play")}</button>` : ""}</div>`).join("")}</div>
+      <div class="srow"><label for="vol">Volume</label><input id="vol" type="range" min="0.1" max="1" step="0.05" value="${P.volume ?? .6}"></div>
+    </section>
+    <section class="set"><h3>Alertes</h3>
+      <div class="srow"><label for="delay">Prévenir après</label><select id="delay"><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option></select></div>
+      <div class="btns"><button id="notif2">Activer les notifications du Mac</button></div>
+      <p class="note">Une mauvaise posture s'affiche tout de suite ; le son et la notification attendent ce délai. Ensuite, 2 minutes minimum entre deux alertes. Bilan à 12 h 30 et 17 h 30.</p>
+    </section>
+    <section class="set"><h3>Caméra</h3>
+      <label class="check"><input type="checkbox" id="blur" ${P.blur?"checked":""}>Flouter l'arrière-plan de l'image</label>
+      <p class="note">Seul l'aperçu est flouté : l'analyse n'en dépend pas. Rien n'est enregistré ni envoyé.</p>
+    </section>`;
+  $("#back").onclick = ()=>go(S.step);
+  panel.querySelectorAll(".segb").forEach(b=>b.onclick = ()=>{ P[b.dataset.k] = b.dataset.v; savePrefs(); applyTheme(); renderSettings(); });
+  panel.querySelectorAll("[data-acc]").forEach(b=>b.onclick = ()=>{ P.accent = b.dataset.acc; savePrefs(); applyTheme(); renderSettings(); });
+  panel.querySelectorAll("[data-snd]").forEach(b=>b.onclick = ()=>{ P.sound = b.dataset.snd; savePrefs(); playSound(P.sound); renderSettings(); });
+  panel.querySelectorAll("[data-play]").forEach(b=>b.onclick = ()=>playSound(b.dataset.play));
+  $("#vol").oninput = e=>{ P.volume = +e.target.value; savePrefs(); };
+  $("#vol").onchange = ()=>playSound(P.sound === "aucun" || P.sound === "voix" ? "carillon" : P.sound);
+  $("#delay").value = String(P.delay); $("#delay").onchange = e=>{ P.delay = +e.target.value; savePrefs(); };
+  $("#notif2").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif2").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif2").textContent = "Indisponible"; } };
+  $("#blur").onchange = e=>{ P.blur = e.target.checked; savePrefs(); if(!P.blur) $("#view").hidden = true; };
+}
+
+/* ================= Mon poste : check-list visuelle (INRS) ================= */
+const DESK = [
+  {k:"feet", i:"i-chair", t:"Pieds à plat au sol", s:"ou repose-pieds"},
+  {k:"knee", i:"i-knee", t:"Cuisses à l'horizontale", s:"genoux vers 90°"},
+  {k:"back", i:"i-back", t:"Dos calé au dossier", s:"creux des reins soutenu"},
+  {k:"elbow", i:"i-elbow", t:"Coudes au corps, vers 90°", s:"à hauteur du clavier"},
+  {k:"wrist", i:"i-wrist", t:"Avant-bras en appui", s:"poignets droits"},
+  {k:"kbd", i:"i-keyboard", t:"Clavier et souris externes", s:"clavier à 10–15 cm du bord"},
+  {k:"face", i:"i-screen", t:"Écran bien en face", s:"pas de torsion du cou"},
+  {k:"win", i:"i-window", t:"Écran de côté par rapport à la fenêtre", s:"ni face, ni dos"}
+];
+function renderDesk(){
+  const ok = DESK.filter(d=>S.desk[d.k]===1).length, ko = DESK.filter(d=>S.desk[d.k]===0);
+  panel.innerHTML = `
+    <div class="btns" style="justify-content:space-between"><h2>Mon poste</h2><button class="link" id="back">← Retour</button></div>
+    <p class="muted">Touchez chaque case : <b style="color:var(--good)">vert</b> = c'est bon, <b style="color:var(--warn)">orange</b> = à corriger.</p>
+    <div class="tiles">${DESK.map(d=>`<button class="tile ${S.desk[d.k]===1?"ok":S.desk[d.k]===0?"ko":""}" data-k="${d.k}">${ico(S.desk[d.k]===1?"i-check":d.i)}${d.t}<span class="s">${d.s}</span></button>`).join("")}</div>
+    <div class="hero ${ok===DESK.length ? "good" : ko.length ? "warn" : ""}"><div class="disc">${ico(ok===DESK.length ? "i-check" : "i-desk")}</div><div><div class="big">${ok} / ${DESK.length}</div><div class="muted">${ok===DESK.length ? "Poste bien réglé." : ko.length ? "À corriger : " + ko.map(d=>d.t.toLowerCase()).join(", ") + "." : "Répondez aux 8 cases."}</div></div></div>`;
+  $("#back").onclick = ()=>go(S.step);
+  panel.querySelectorAll("button.tile").forEach(b=>b.onclick = ()=>{
+    const k = b.dataset.k, v = S.desk[k]; S.desk[k] = v===undefined || v===null ? 1 : v===1 ? 0 : null;
+    store.set("nd4_desk", S.desk); renderDesk();
+  });
+}
+
+/* ================= Alertes ================= */
+function unlockAudio(){ try{ S.audio = S.audio || new (window.AudioContext||window.webkitAudioContext)(); S.audio.resume(); }catch(e){} }
+// petits sons de repère pendant la mesure
+function beep(freq=660, dur=.15, force=false){
+  if(!S.audio || !force) return;
+  try{ const o=S.audio.createOscillator(), g=S.audio.createGain(), t=S.audio.currentTime; o.frequency.value=freq;
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.25,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g).connect(S.audio.destination); o.start(); o.stop(t+dur+.05); }catch(e){}
+}
+// Sons d'alerte, au choix (fabriqués par le navigateur, sans fichier à télécharger)
+const SOUNDS = {carillon:"Carillon", goutte:"Goutte d'eau", cloche:"Cloche douce", marimba:"Marimba", bip:"Double bip", voix:"Voix (dit quoi corriger)", aucun:"Aucun son"};
+function tone(f, at, dur, {type="sine", vol=1, to=null}={}){
+  const A = S.audio, t = A.currentTime + at, o = A.createOscillator(), g = A.createGain(), v = .32*(S.prefs.volume ?? .6)*vol;
+  o.type = type; o.frequency.setValueAtTime(f, t); if(to) o.frequency.exponentialRampToValueAtTime(to, t + dur*.6);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(v,.0002), t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(A.destination); o.start(t); o.stop(t + dur + .05);
+}
+function playSound(name = S.prefs.sound, issue = {t:"Redressez-vous", a:"Dos contre le dossier"}){
+  if(name === "aucun") return;
+  if(name === "voix"){ say(`${issue.t}. ${issue.a}.`, true); return; }
+  unlockAudio(); if(!S.audio) return;
+  try{
+    if(name === "carillon"){ tone(784, 0, .7); tone(1047, .2, .9); }
+    else if(name === "goutte"){ tone(1400, 0, .22, {to:520}); tone(1100, .28, .18, {to:480, vol:.6}); }
+    else if(name === "cloche"){ tone(523, 0, 1.8); tone(1046, 0, 1.3, {vol:.35}); tone(1568, 0, .9, {vol:.15}); }
+    else if(name === "marimba"){ [659, 784, 988].forEach((f,i)=>tone(f, i*.13, .35, {type:"triangle", vol:.9})); }
+    else if(name === "bip"){ tone(740, 0, .12, {type:"square", vol:.45}); tone(740, .22, .12, {type:"square", vol:.45}); }
+  }catch(e){}
+}
+function notify(title, body){ try{ if(window.Notification && Notification.permission==="granted") new Notification(title, {body, silent:true, tag:"nuque"}); }catch(e){} }
+function alertUser(x){ playSound(S.prefs.sound, x); document.title = "⚠ " + x.t; notify(x.t, x.a ? `${x.a}. ${x.s}` : x.s); }
+let pipCanvas = null, pipVideo = null, pipDoc = null;
+async function openPip(){
+  // Petite pastille flottante par-dessus les autres applis : le problème, puis quoi faire
+  if(window.documentPictureInPicture){
+    try{
+      const w = await documentPictureInPicture.requestWindow({width:300, height:64});
+      pipDoc = w.document;
+      pipDoc.head.innerHTML = `<style>html,body{margin:0;height:100%;background:#0E1514;color:#E4EDEA;font:13px/1.25 -apple-system,system-ui,sans-serif;overflow:hidden}
+        #p{display:flex;align-items:center;gap:10px;height:100%;padding:0 12px}#d{flex:none;width:14px;height:14px;border-radius:50%;background:#2FA867}
+        #x{min-width:0;display:flex;flex-direction:column;gap:2px}#t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        #a{color:#9FB4AE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#a::before{content:"→ "}</style>`;
+      pipDoc.body.innerHTML = `<div id="p"><span id="d"></span><span id="x"><span id="t">Suivi en cours</span><span id="a">Asseyez-vous bien droit</span></span></div>`;
+      w.addEventListener("pagehide", ()=>{ pipDoc = null; });
+      return;
+    }catch(e){}
+  }
+  try{
+    pipCanvas = document.createElement("canvas"); pipCanvas.width = 300; pipCanvas.height = 64;
+    pipVideo = document.createElement("video"); pipVideo.muted = true; pipVideo.playsInline = true;
+    pipVideo.srcObject = pipCanvas.captureStream(4); updatePip("good", "Suivi en cours", "Asseyez-vous bien droit");
+    await pipVideo.play(); await pipVideo.requestPictureInPicture();
+  }catch(e){ const b = $("#pip"); if(b) b.textContent = "Mini-fenêtre indisponible"; }
+}
+function updatePip(cls, title, action){
+  const col = {good:"#2FA867", warn:"#D99520", bad:"#E2582A"}[cls] || "#556";
+  if(pipDoc){
+    const d = pipDoc.getElementById("d"), t = pipDoc.getElementById("t"), a = pipDoc.getElementById("a");
+    if(d) d.style.background = col; if(t && t.textContent !== title) t.textContent = title; if(a && a.textContent !== action) a.textContent = action;
+    return;
+  }
+  if(!pipCanvas) return;
+  const x = pipCanvas.getContext("2d");
+  x.fillStyle = "#0E1514"; x.fillRect(0,0,300,64);
+  x.fillStyle = col; x.beginPath(); x.arc(22,32,8,0,7); x.fill();
+  x.fillStyle = "#F1F6F4"; x.font = "700 15px -apple-system, system-ui, sans-serif"; x.fillText(title.slice(0,30), 40, 27);
+  x.fillStyle = "#9FB4AE"; x.font = "14px -apple-system, system-ui, sans-serif"; x.fillText(("→ " + action).slice(0,34), 40, 47);
+}
+
+/* ================= Surimpression ================= */
+function drawOverlay(m){
+  const r = overlay.getBoundingClientRect(), dpr = devicePixelRatio;
+  if(!r.width) return;
+  if(overlay.width !== Math.round(r.width*dpr)){ overlay.width = Math.round(r.width*dpr); overlay.height = Math.round(r.height*dpr); }
+  const Wc = overlay.width, Hc = overlay.height; octx.clearRect(0,0,Wc,Hc);
+  if(!m) return;
+  const sc = Math.max(Wc/m.W, Hc/m.H), ox = (Wc - m.W*sc)/2, oy = (Hc - m.H*sc)/2;
+  const P = p => [ox + p.x*m.W*sc, oy + p.y*m.H*sc];
+  const [, ey] = P({x:m.eu, y:m.ev});
+  octx.setLineDash([6*dpr, 6*dpr]); octx.strokeStyle = "rgba(95,224,198,.9)"; octx.lineWidth = 2.5*dpr;
+  octx.beginPath(); octx.moveTo(0, ey); octx.lineTo(Wc, ey); octx.stroke(); octx.setLineDash([]);
+  [468,473,1].forEach(i=>{ const [x,y] = P(m.L[i]); octx.fillStyle = "#5FE0C6"; octx.beginPath(); octx.arc(x,y,4*dpr,0,7); octx.fill(); });
+  // axe de la tête (front → menton)
+  { const [x1,y1] = P(m.L[10]), [x2,y2] = P(m.L[152]); octx.strokeStyle = "rgba(255,255,255,.8)"; octx.lineWidth = 2*dpr; octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke(); }
+  if(m.P){
+    const [a1,b1] = P(m.P[11]), [a2,b2] = P(m.P[12]), [e1,f1] = P(m.P[7]), [e2,f2] = P(m.P[8]), [nx,ny] = P(m.L[1]);
+    octx.strokeStyle = "rgba(230,168,58,.95)"; octx.lineWidth = 3*dpr; octx.beginPath(); octx.moveTo(a1,b1); octx.lineTo(a2,b2); octx.stroke();
+    octx.strokeStyle = "rgba(230,168,58,.55)"; octx.lineWidth = 2*dpr; octx.beginPath(); octx.moveTo(e1,f1); octx.lineTo(a1,b1); octx.moveTo(e2,f2); octx.lineTo(a2,b2); octx.moveTo(nx,ny); octx.lineTo((a1+a2)/2,(b1+b2)/2); octx.stroke();
+  }
+}
+
+window.addEventListener("beforeunload", saveHist);
+window.__nd = {setPipDoc:d=>{pipDoc=d}, cal, onMeasure:m=>onMeasure(m), S, go, screenAdvice, addToSeries, currentScreen, recordHist, hist};
+go("prep");
+if("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
