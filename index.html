@@ -877,7 +877,24 @@ function liveResultTick(m){
     S.series[key] = []; addToSeries(key, one); go("result");
   }
 }
-function say(t, on = G?.voice){ if(!on || !window.speechSynthesis) return; try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = "fr-FR"; u.rate = 1.05; speechSynthesis.speak(u); }catch(e){} }
+/* Voix : on choisit la voix française la plus naturelle disponible (voix « Natural » d'Edge, voix Premium/Siri du Mac, Google…) */
+function frVoices(){ try{ return (speechSynthesis.getVoices()||[]).filter(v=>/^fr/i.test(v.lang)); }catch(e){ return []; } }
+function voiceScore(v){
+  const n = v.name; let s = 0;
+  if(/natural|neural/i.test(n)) s += 100;            // Edge : Denise, Henri, Vivienne… (Online Natural)
+  if(/premium|enhanced|amélioré|siri/i.test(n)) s += 80; // Mac : voix de qualité supérieure
+  if(/google/i.test(n)) s += 50;
+  if(/^fr-FR/i.test(v.lang)) s += 10;
+  if(/compact|eloquence|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley|jacques/i.test(n)) s -= 60; // voix robotiques
+  return s;
+}
+function pickVoice(){
+  const vs = frVoices(), want = S.prefs.voiceName;
+  return vs.find(v=>v.name===want) || vs.slice().sort((a,b)=>voiceScore(b)-voiceScore(a))[0] || null;
+}
+function volCurve(){ const v = S.prefs.volume ?? .6; return Math.max(0, Math.min(1, v*v)); } // jauge plus perceptible : le volume perçu suit le carré
+function say(t, on = G?.voice){ if(!on || !window.speechSynthesis) return; try{ speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); const v = pickVoice(); if(v){ u.voice = v; u.lang = v.lang; } else u.lang = "fr-FR"; u.rate = 0.98; u.pitch = 1; u.volume = Math.max(.05, S.prefs.volume ?? .6); speechSynthesis.speak(u); }catch(e){} }
+try{ speechSynthesis.onvoiceschanged = ()=>{ if(typeof renderSettings==="function" && document.querySelector("#voiceSel")) renderSettings(); }; }catch(e){}
 async function startGuide(){
   const b = curBase(), sc = currentScreen(); if(!b || !S.running) return;
   // Caméra sur l'écran : elle bouge avec lui, on suit sa position. Caméra à côté : on suit le regard vers un rond au centre.
@@ -1323,6 +1340,7 @@ function renderSettings(){
     </section>
     <section class="set"><h3>Son d'alerte</h3>
       <div class="sounds">${Object.entries(SOUNDS).map(([k,l])=>`<div class="snd ${P.sound===k?"sel":""}"><button class="snd-pick" data-snd="${k}">${P.sound===k ? ico("i-check") : ico("i-sound")}<span>${l}</span></button>${k !== "aucun" ? `<button class="snd-play" data-play="${k}" aria-label="Écouter ${l}">${ico("i-play")}</button>` : ""}</div>`).join("")}</div>
+      <div class="srow"><label for="voiceSel">Voix</label><select id="voiceSel">${frVoices().length ? frVoices().sort((a,b)=>voiceScore(b)-voiceScore(a)).map(v=>`<option value="${v.name.replace(/"/g,"&quot;")}" ${pickVoice()?.name===v.name?"selected":""}>${v.name.replace(/^Microsoft /,"").replace(/ - French.*$/,"").replace(/\(.*?\)/,m=>/natural/i.test(m)?"(naturelle)":"")}</option>`).join("") : `<option>Voix du système</option>`}</select><button class="snd-play" id="voiceTest" aria-label="Écouter la voix">${ico("i-play")}</button></div>
       <div class="srow"><label for="vol">Volume</label><input id="vol" type="range" min="0.1" max="1" step="0.05" value="${P.volume ?? .6}"></div>
     </section>
     <section class="set"><h3>Alertes</h3>
@@ -1337,7 +1355,9 @@ function renderSettings(){
   panel.querySelectorAll("[data-snd]").forEach(b=>b.onclick = ()=>{ P.sound = b.dataset.snd; savePrefs(); playSound(P.sound); renderSettings(); });
   panel.querySelectorAll("[data-play]").forEach(b=>b.onclick = ()=>playSound(b.dataset.play));
   $("#vol").oninput = e=>{ P.volume = +e.target.value; savePrefs(); };
-  $("#vol").onchange = ()=>playSound(P.sound === "aucun" || P.sound === "voix" ? "carillon" : P.sound);
+  $("#vol").onchange = ()=>playSound(P.sound === "aucun" ? "carillon" : P.sound);
+  const vsel = $("#voiceSel"); if(vsel) vsel.onchange = e=>{ P.voiceName = e.target.value; savePrefs(); say("Tête penchée sur le côté. Yeux à l'horizontale.", true); };
+  const vt = $("#voiceTest"); if(vt) vt.onclick = ()=>say("Redressez-vous. Dos contre le dossier.", true);
   $("#delay").value = String(P.delay); $("#delay").onchange = e=>{ P.delay = +e.target.value; savePrefs(); };
   $("#notif2").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif2").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif2").textContent = "Indisponible"; } };
 }
@@ -1379,7 +1399,7 @@ function beep(freq=660, dur=.15, force=false){
 // Sons d'alerte, au choix (fabriqués par le navigateur, sans fichier à télécharger)
 const SOUNDS = {carillon:"Carillon", goutte:"Goutte d'eau", cloche:"Cloche douce", marimba:"Marimba", bip:"Double bip", voix:"Voix (dit quoi corriger)", aucun:"Aucun son"};
 function tone(f, at, dur, {type="sine", vol=1, to=null}={}){
-  const A = S.audio, t = A.currentTime + at, o = A.createOscillator(), g = A.createGain(), v = .32*(S.prefs.volume ?? .6)*vol;
+  const A = S.audio, t = A.currentTime + at, o = A.createOscillator(), g = A.createGain(), v = .5*volCurve()*vol;
   o.type = type; o.frequency.setValueAtTime(f, t); if(to) o.frequency.exponentialRampToValueAtTime(to, t + dur*.6);
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(v,.0002), t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
   o.connect(g).connect(A.destination); o.start(t); o.stop(t + dur + .05);
