@@ -464,7 +464,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "8 · 23 nov. 17 h 20";
+const APP_VERSION = "9 · 23 nov. 17 h 20";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -472,6 +472,25 @@ try{
     navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!had){ had = true; return; } if(!S.watching) location.reload(); else S.updateReady = true; });
     navigator.serviceWorker.getRegistration().then(r=>r && r.update()).catch(()=>{});
   }
+}catch(e){}
+/* Une seule fenêtre à la fois : clic sur l'icône = on revient à la fenêtre déjà ouverte */
+try{ if(window.launchQueue) launchQueue.setConsumer(()=>{ try{ window.focus(); }catch(e){} }); }catch(e){}
+try{
+  const bc = new BroadcastChannel("nuque-droite"), me = Math.random().toString(36).slice(2), born = Date.now();
+  bc.onmessage = e=>{
+    const d = e.data || {};
+    if(d.type === "hello" && d.id !== me) bc.postMessage({type:"here", id:me, born, to:d.id});
+    if(d.type === "here" && d.to === me && d.born < born){
+      // une autre fenêtre était ouverte avant : celle-ci se retire
+      document.body.innerHTML = `<div style="max-width:420px;margin:15vh auto;padding:24px;text-align:center;font-family:system-ui,sans-serif">
+        <h2 style="margin:0 0 8px">Nuque Droite est déjà ouverte</h2><p style="margin:0 0 16px;opacity:.75">Une seule fenêtre suffit (et évite d'utiliser la caméra deux fois).</p>
+        <button onclick="window.close()" style="font:inherit;padding:10px 18px;border-radius:12px;cursor:pointer">Fermer cette fenêtre</button></div>`;
+      try{ S.running = false; S.watching = false; }catch(_){}
+      try{ document.querySelectorAll("video").forEach(v=>v.srcObject?.getTracks().forEach(t=>t.stop())); }catch(_){}
+      setTimeout(()=>{ try{ window.close(); }catch(_){} }, 300);
+    }
+  };
+  bc.postMessage({type:"hello", id:me});
 }catch(e){}
 /* ================= Navigation ================= */
 const ORDER = ["prep","measure","result","watch"];
