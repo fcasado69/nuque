@@ -605,7 +605,7 @@ const render = {
       </div>
       <div class="bar"><i id="pbar"></i></div>
       <details open><summary>Tout ce que je mesure (14 points)</summary><div class="mon" id="mon"></div><p class="note" style="margin-top:8px">Comparé à votre position assis droit pendant la mesure. Vert : bien · orange : à surveiller · rouge : à corriger.</p></details>
-      ${r ? `<div class="pill ${r.dir ? "warn" : "good"}">${ico(r.dir>0?"i-up":r.dir<0?"i-down":"i-check")}<span class="grow">Écran : <b>${r.dir ? r.title : "bien placé"}</b></span><button class="link" id="recal">Remesurer</button></div>` : ""}
+      ${r ? `<div class="pill ${r.dir ? "warn" : "good"}">${ico(r.dir>0?"i-up":r.dir<0?"i-down":"i-check")}<span class="grow" id="scrTxt">Écran : <b>${r.dir ? r.title : "bien placé"}</b> <span class="muted">(dernière mesure)</span></span><button class="link" id="recal">Remesurer</button></div>` : ""}
       ${b && b.ev0 == null ? `<div class="pill warn">${ico("i-alert")}<span class="grow">Refaites une mesure pour activer les nouvelles détections (tête sur le côté, enfoncé dans le siège).</span><button class="link" id="recal2">Mesurer</button></div>` : ""}
       <div class="btns"><button id="pip">Petite pastille flottante</button><button id="notif">Notifications du Mac</button><button class="link" id="goSet">Son et réglages</button></div>
       <p class="note">Le suivi continue si cette fenêtre est derrière vos autres applis. Ne la réduisez pas dans le Dock.</p>
@@ -1098,6 +1098,35 @@ function startWatch(){
   S.watching = true; $("#watchDot").hidden = false;
   go("watch");
 }
+/* Hauteur d'écran suivie en direct pendant le Suivi.
+   - Caméra sur l'écran (MacBook, webcam posée sur l'écran) : si l'écran bouge, la caméra bouge, on recalcule sa hauteur.
+   - Caméra à côté (Dell + MacBook) : la caméra ne bouge pas ; on suit où va votre regard. En travaillant,
+     le regard se promène autour du centre de l'écran : sa valeur médiane sur 30 s donne le centre de l'écran. */
+const tnD = a => Math.tan(a*RAD), atD = x => Math.atan(x)*DEG;
+function updateLiveScreen(b, m, bodyOk, now){
+  const W = S.watch; if(!W || !m || !b) return;
+  W.scrS = (W.scrS || []).filter(x => now - x.t < (b.mode === "camera" ? 4000 : 30000));
+  // on ne mesure l'écran que si vous êtes assis comme pendant la mesure (sinon une mauvaise posture fausserait le calcul)
+  if(bodyOk){
+    let v = null;
+    if(b.mode === "camera" && b.theta != null && m.c) v = b.theta - elev(m.c);                       // caméra sous l'horizontale
+    else if(b.camBelowK != null && b.kHead != null) v = b.camBelowK + (b.kHead - m.head) + (m.eye - b.kEye); // regard sous l'horizontale
+    if(v != null && isFinite(v)) W.scrS.push({t:now, v});
+  }
+  const enough = b.mode === "camera" ? W.scrS.length >= 15 : (W.scrS.length >= 120 && now - W.scrS[0].t > 12000);
+  if(!enough) return;
+  const sc = currentScreen(), D = b.sDist * (S.ema.dist || b.dist) / b.dist, v = median(W.scrS.map(x=>x.v));
+  let top = b.mode === "camera" ? atD(tnD(v) + CAM_GAP_CM/D) : atD(tnD(v) - sc.h/(2*D));
+  const cc = applyCorr(top, D); const r = screenAdvice(cc.top, cc.D, sc.h);
+  // un peu d'hystérésis pour éviter que le message clignote
+  const prev = W.scr; W.scr = (prev && prev.dir && !r.dir && r.cm > 1) ? prev : r;
+  const pill = $("#scrTxt"); if(pill){ pill.innerHTML = `Écran : <b>${W.scr.dir ? W.scr.title : "bien placé"}</b> <span class="muted">(en direct)</span>`; pill.parentElement.className = "pill " + (W.scr.dir ? "warn" : "good"); }
+}
+function screenIssue(){
+  const r = S.watch?.scr; if(!r || !r.dir) return null;
+  const up = r.dir > 0;
+  return {k:"screen", i: up ? "i-up" : "i-down", t: up ? "Écran trop bas" : "Écran trop haut", s: `${up ? "Montez" : "Baissez"} l'écran de ${r.cm} cm environ.`, a: `${up ? "Montez" : "Baissez"} l'écran de ${r.cm} cm`, v: `${r.cm} cm`};
+}
 // Toutes les mesures, comparées à votre position de référence (assis droit pendant la mesure)
 function metrics(b){
   const e = S.ema, W = S.watch, dif = (v, v0) => v != null && v0 != null ? v - v0 : null;
@@ -1179,7 +1208,10 @@ function watchTick(m){
   if(b.squint0 == null && W.sq0 == null && now - W.start > 120000 && W.sqS.length > 200){ W.sq0 = median(W.sqS.map(x=>x[0])); W.bl0 = median(W.sqS.map(x=>x[1])); }
   if(m.blink != null){ const closed = m.blink > Math.max(.45, (b.blink0 ?? W.bl0 ?? 0) + .3); if(W.eyeClosed && !closed) W.blinks.push(now); W.eyeClosed = closed; W.blinks = W.blinks.filter(t => now - t < 60000); }
   W.present += dt; W.sinceBreak += dt;
-  const all = issues(b), is = all.filter(x=>!x.eye), eyes = all.filter(x=>x.eye), ok = !is.length; if(ok) W.good += dt;
+  const all = issues(b), is = all.filter(x=>!x.eye), eyes = all.filter(x=>x.eye);
+  updateLiveScreen(b, m, !is.length, now);
+  const scrI = screenIssue(); if(scrI) is.push(scrI);
+  const ok = !is.length; if(ok) W.good += dt;
   recordHist(dt, ok);
   const cls = ok ? "good" : (is.length > 1 ? "bad" : "warn");
   setBadge(cls, ok ? "Bonne posture" : is[0].t);
