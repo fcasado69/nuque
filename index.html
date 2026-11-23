@@ -509,7 +509,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "11 · 23 nov. 17 h 30";
+const APP_VERSION = "12 · 23 nov. 17 h 35";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -1224,7 +1224,7 @@ function startWatch(){
 const tnD = a => Math.tan(a*RAD), atD = x => Math.atan(x)*DEG;
 function updateLiveScreen(b, m, bodyOk, now){
   const W = S.watch; if(!W || !m || !b) return;
-  W.scrS = (W.scrS || []).filter(x => now - x.t < (b.mode === "camera" ? 4000 : 30000));
+  W.scrS = (W.scrS || []).filter(x => now - x.t < (b.mode === "camera" ? 4000 : 15000));
   // on ne mesure l'écran que si vous êtes assis comme pendant la mesure (sinon une mauvaise posture fausserait le calcul)
   if(bodyOk){
     let v = null;
@@ -1232,14 +1232,19 @@ function updateLiveScreen(b, m, bodyOk, now){
     else if(b.camBelowK != null && b.kHead != null) v = b.camBelowK + (b.kHead - m.head) + (m.eye - b.kEye); // regard sous l'horizontale
     if(v != null && isFinite(v)) W.scrS.push({t:now, v});
   }
-  const enough = b.mode === "camera" ? W.scrS.length >= 15 : (W.scrS.length >= 120 && now - W.scrS[0].t > 12000);
-  if(!enough) return;
+  const enough = b.mode === "camera" ? W.scrS.length >= 15 : (W.scrS.length >= 60 && now - W.scrS[0].t > 6000);
+  const pill0 = $("#scrTxt");
+  if(!enough){ if(pill0 && !W.scr) pill0.innerHTML = `Écran : <b>analyse en cours…</b> <span class="muted">${bodyOk ? "" : "(redressez-vous pour que je puisse mesurer l'écran)"}</span>`; return; }
   const sc = currentScreen(), D = b.sDist * (S.ema.dist || b.dist) / b.dist, v = median(W.scrS.map(x=>x.v));
   let top = b.mode === "camera" ? atD(tnD(v) + CAM_GAP_CM/D) : atD(tnD(v) - sc.h/(2*D));
   const cc = applyCorr(top, D); const r = screenAdvice(cc.top, cc.D, sc.h);
   // un peu d'hystérésis pour éviter que le message clignote
   const prev = W.scr; W.scr = (prev && prev.dir && !r.dir && r.cm > 1) ? prev : r;
-  const pill = $("#scrTxt"); if(pill){ pill.innerHTML = `Écran : <b>${W.scr.dir ? W.scr.title : "bien placé"}</b> <span class="muted">(en direct)</span>`; pill.parentElement.className = "pill " + (W.scr.dir ? "warn" : "good"); }
+  const pill = $("#scrTxt");
+  if(pill){
+    pill.innerHTML = `Écran : <b>${W.scr.dir ? W.scr.title : "bien placé"}</b><br><span class="muted">Regard vers le centre : <b>${Math.round(r.center)}°</b> sous l'horizontale (bien entre ${r.lo} et ${r.hi}°) · ${b.mode === "camera" ? "caméra sur l'écran" : "suivi du regard"}${bodyOk ? "" : " · en attente : redressez-vous"}</span>`;
+    pill.parentElement.className = "pill " + (W.scr.dir ? "warn" : "good");
+  }
 }
 function screenIssue(){
   const r = S.watch?.scr; if(!r || !r.dir) return null;
