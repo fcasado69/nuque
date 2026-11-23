@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Nuque Droite</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0E7566">
+<meta name="theme-color" content="#1D5C68">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout : caméra à gauche, carte d'action à droite. Pictogrammes plutôt que texte. Calibration plein écran avec un rond. */
 :root{
@@ -207,6 +207,101 @@ table.cmp td.ok{color:var(--good);font-weight:600} table.cmp td.ko{color:var(--w
 .g-actions{position:absolute;left:0;right:0;bottom:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:0 16px}
 .g-actions button{background:#162120;color:#EAF2EF;border-color:#33463F}
 .g-voice{display:flex;align-items:center;gap:6px;color:#9FB4AE;font-size:.9rem}
+
+/* ============ Refonte : instrument de mesure compact ============
+   Layout : une seule colonne étroite (≈ 420 px) à garder sur le côté de l'écran.
+   Motif : le fil à plomb des kinés (trait vertical + plomb), couleur signal ambre. */
+:root{
+  --bg:#F3F4F1; --surface:#FFFFFF; --sunk:#ECEEEA; --ink:#172026; --muted:#5B6670; --line:#D5D9D4;
+  --accent:#1D5C68; --accent-ink:#FFFFFF; --signal:#D99419; --good:#2C7A45; --warn:#A86300; --bad:#B4391C; --pain:#6E3A8E;
+  --f-display:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --f-body:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1517; --surface:#161E21; --sunk:#11181A; --ink:#E5EBEB; --muted:#8C999E; --line:#283337;
+  --accent:#7CC6D2; --accent-ink:#0B1416; --signal:#F2B33D; --good:#5CC27E; --warn:#E9A93F; --bad:#F07A55; --pain:#C59AE6; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0F1517; --surface:#161E21; --sunk:#11181A; --ink:#E5EBEB; --muted:#8C999E; --line:#283337;
+  --accent:#7CC6D2; --accent-ink:#0B1416; --signal:#F2B33D; --good:#5CC27E; --warn:#E9A93F; --bad:#F07A55; --pain:#C59AE6; color-scheme:dark }
+body{padding-block:14px 32px}
+.wrap{max-width:440px;gap:14px}
+.grid{grid-template-columns:minmax(0,1fr)!important;gap:14px}
+header{flex-wrap:nowrap}
+h1{font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:1.35rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+h1 .plumb{width:14px;height:24px;fill:var(--signal);stroke:var(--signal);stroke-width:1.6}
+h2{font-stretch:88%;font-weight:700;font-size:1.3rem;letter-spacing:-.005em}
+h3{font-weight:600;font-size:.98rem}
+.hright{gap:4px;flex-wrap:nowrap}
+.tool{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--r);border-color:transparent;background:transparent;position:relative}
+.tool svg{width:20px;height:20px;color:var(--ink)}
+.tool:hover{background:var(--sunk)}
+.tool.on{background:var(--ink)} .tool.on svg{color:var(--bg)}
+.tool .live-dot{position:absolute;top:6px;right:6px;width:7px;height:7px}
+.steps{gap:0;border-bottom:1px solid var(--line);flex-wrap:nowrap}
+.steps li{flex:1;justify-content:center;border:none;border-radius:0;padding:6px 2px 8px;font-size:.82rem;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.steps li b{font-family:var(--f-mono);font-weight:400;color:var(--muted)}
+.steps li.on{background:none;color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.steps li.done{color:var(--muted);border-color:transparent}
+.steps li.done b{color:var(--good)}
+.stage{border-radius:var(--r);aspect-ratio:4/3;transition:aspect-ratio .2s}
+.stage.mini{aspect-ratio:16/5}
+.stage.mini .badge{top:8px;left:8px} .stage.mini .enh{display:none}
+.cam-size{position:absolute;right:8px;bottom:8px;width:30px;height:30px;padding:0;border-radius:var(--r);background:rgba(10,15,17,.6);border:none;display:grid;place-items:center}
+.cam-size svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.badge,.enh{border-radius:var(--r);font-size:.72rem;padding:3px 8px}
+.enh{background:rgba(242,179,61,.92);color:#1B1305}
+.panel{border-radius:var(--r);padding:18px;gap:16px}
+button{border-radius:var(--r);padding:9px 14px}
+button.primary{font-size:1rem;padding:12px 18px;border-radius:var(--r)}
+.tiles{gap:6px}
+.tile{background:transparent;border:1px solid var(--line);border-radius:var(--r);padding:10px 6px;font-size:.78rem}
+.tile svg{width:30px;height:30px}
+.tile.ko{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+button.tile.ok{background:color-mix(in srgb,var(--good) 7%,transparent)}
+.pill{border-radius:var(--r);background:transparent;border:1px solid var(--line);padding:8px 10px}
+.pill svg{width:22px;height:22px}
+.pill.warn{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 7%,transparent)}
+.hero{background:transparent;border:1px solid var(--line);border-left:5px solid var(--muted);border-radius:var(--r);padding:12px 14px;gap:12px}
+.hero .disc{width:40px;height:40px;border-radius:var(--r)}
+.hero .disc svg{width:24px;height:24px}
+.hero .big{font-stretch:88%;font-weight:700;font-size:1.45rem;line-height:1.1}
+.hero .num{font-size:.95rem}
+.hero.good{border-left-color:var(--good)} .hero.warn{border-left-color:var(--warn)} .hero.bad{border-left-color:var(--bad)}
+.facts{gap:0;border:1px solid var(--line);border-radius:var(--r)}
+.fact{background:transparent;border-radius:0;padding:10px 6px}
+.fact + .fact{border-left:1px solid var(--line)}
+.fact .n{font-size:1.15rem}
+.bar{height:4px;border-radius:2px}
+.mon{grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.mt{border-radius:0;border-left:3px solid var(--line);border-bottom:1px solid var(--line);background:transparent;padding:7px 8px}
+.mt:nth-child(odd){border-right:1px solid var(--line)}
+.how{border-radius:var(--r)}
+.preview{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
+.opts{gap:6px}
+.opt{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
+.opt.sel{border:2px solid var(--accent)}
+.livebar{border-radius:var(--r)}
+details{border-radius:var(--r)}
+.panel details{background:transparent;border:1px solid var(--line);padding:8px 12px}
+.seg{border-radius:var(--r)} .segb{border-radius:4px}
+.snd{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
+.snd.sel{border:2px solid var(--accent)}
+.sounds{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rf{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
+.insight{border-radius:var(--r)}
+.break{border-radius:var(--r)}
+.painrow button{border-radius:4px;width:34px;height:34px}
+.chip{border-radius:var(--r)}
+.chosen{border-radius:var(--r)}
+.cal-msg svg{color:#F2B33D}
+.cal-msg .n{color:#F2B33D}
+.cal-dot,.g-dot,.lrdot{background:#F2B33D}
+.g-arrow{color:#F2B33D} .g-num{color:#F2B33D}
+.g-zone{border-radius:3px}
+.preview .mini i{background:#F2B33D}
+.opt svg .cam{fill:var(--signal)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -262,28 +357,28 @@ table.cmp td.ok{color:var(--good);font-weight:600} table.cmp td.ko{color:var(--w
 
 <div class="wrap">
   <header>
-    <h1>Nuque <span>Droite</span></h1>
+    <h1><svg class="plumb" viewBox="0 0 20 32" aria-hidden="true"><path d="M10 1v20"/><path d="M10 21l-4.5 5.5L10 31l4.5-4.5z"/></svg>Nuque Droite</h1>
     <div class="hright">
-      <ol class="steps" id="steps">
-        <li data-s="prep"><b>1</b>Préparer</li>
-        <li data-s="measure"><b>2</b>Mesurer</li>
-        <li data-s="result"><b>3</b>Résultat</li>
-        <li data-s="watch"><b>4</b>Suivi</li>
-      </ol>
-      <button class="tool" id="tDesk"><svg><use href="#i-desk"/></svg>Mon poste</button>
-      <button class="tool" id="tSet" aria-label="Réglages"><svg><use href="#i-gear"/></svg>Réglages</button>
-      <button class="tool" id="tHist"><svg><use href="#i-chart"/></svg>Historique<span class="live-dot" id="watchDot" hidden title="Suivi en cours"></span></button>
+      <button class="tool" id="tDesk" title="Mon poste" aria-label="Mon poste"><svg><use href="#i-desk"/></svg></button>
+      <button class="tool" id="tHist" title="Historique" aria-label="Historique"><svg><use href="#i-chart"/></svg><span class="live-dot" id="watchDot" hidden title="Suivi en cours"></span></button>
+      <button class="tool" id="tSet" title="Réglages" aria-label="Réglages"><svg><use href="#i-gear"/></svg></button>
     </div>
   </header>
+  <ol class="steps" id="steps">
+    <li data-s="prep"><b>1</b>Préparer</li>
+    <li data-s="measure"><b>2</b>Mesurer</li>
+    <li data-s="result"><b>3</b>Résultat</li>
+    <li data-s="watch"><b>4</b>Suivi</li>
+  </ol>
   <div class="grid">
     <div class="stage">
       <video id="video" playsinline muted></video>
       <canvas id="proc" hidden></canvas>
-      <canvas id="view" hidden></canvas>
       <canvas id="overlay"></canvas>
       <div class="ph" id="ph"><svg width="56" height="56" style="opacity:.6"><use href="#i-cam"/></svg><div>Images analysées sur votre ordinateur.<br>Rien n'est envoyé.</div></div>
       <div class="badge" id="badge" hidden><span class="dot" id="bdot"></span><span id="btxt"></span></div>
       <div class="enh" id="enh" hidden>Contre-jour corrigé</div>
+      <button class="cam-size" id="camSize" aria-label="Agrandir ou réduire l'image"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="camSizeP" d="M6 15l6-6 6 6"/></svg></button>
     </div>
     <section class="panel" id="panel" aria-live="polite"></section>
   </div>
@@ -343,7 +438,7 @@ const store = {
 };
 const S = {
   step:"prep", view:"prep",
-  prefs: Object.assign({progressive:false, sound:"carillon", volume:.6, delay:30, overrides:{}, camMode:"auto", theme:"auto", accent:"sapin", textSize:"normal", blur:true}, store.get("nd4_prefs", {})),
+  prefs: Object.assign({progressive:false, sound:"carillon", volume:.6, delay:30, overrides:{}, camMode:"auto", theme:"auto", accent:"petrole", textSize:"normal"}, store.get("nd4_prefs", {})),
   bases: store.get("nd5_bases", {}),        // une mesure par écran
   series: store.get("nd5_series", {}),      // mesures récentes par écran
   hist: store.get("nd4_hist", {}),
@@ -357,8 +452,10 @@ const savePrefs = ()=>store.set("nd4_prefs", S.prefs);
 if(typeof S.prefs.sound !== "string") S.prefs.sound = "carillon";
 
 /* ================= Apparence ================= */
-const ACCENTS = {sapin:["#0E7566","#3CBFA8","Sapin"], ocean:["#1F5FA8","#6FA8F0","Océan"], prune:["#7A3E9D","#C08BEA","Prune"], corail:["#B9472A","#F08A64","Corail"], ardoise:["#3D4B5C","#A3B4C8","Ardoise"]};
+const ACCENTS_KEYS = ["petrole","ambre","ocean","prune","corail","ardoise"];
+const ACCENTS = {petrole:["#1D5C68","#7CC6D2","Pétrole"], ambre:["#8A5300","#F2B33D","Ambre"], ocean:["#2B4FA0","#8FB0F2","Océan"], prune:["#6E3A8E","#C59AE6","Prune"], corail:["#A9432A","#F08A64","Corail"], ardoise:["#3D4B5C","#A9B8CA","Ardoise"]};
 function applyTheme(){
+  if(!ACCENTS_KEYS.includes(S.prefs.accent)) S.prefs.accent = "petrole";
   const r = document.documentElement;
   if(S.prefs.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", S.prefs.theme);
   const [l, d] = ACCENTS[S.prefs.accent] || ACCENTS.sapin;
@@ -425,7 +522,15 @@ function go(view){
   });
   $("#tHist").classList.toggle("on", view==="history"); $("#tSet").classList.toggle("on", view==="settings"); $("#tDesk").classList.toggle("on", view==="desk");
   render[view]();
+  sizeStage();
 }
+function sizeStage(){
+  const auto = S.view !== "measure";
+  const mini = S.view === "measure" ? false : (S.prefs.camMini ?? auto);
+  document.querySelector(".stage").classList.toggle("mini", mini);
+  $("#camSizeP").setAttribute("d", mini ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6");
+}
+$("#camSize").onclick = ()=>{ S.prefs.camMini = !document.querySelector(".stage").classList.contains("mini"); savePrefs(); sizeStage(); };
 $("#tHist").onclick = ()=> S.view==="history" ? go(S.step) : go("history");
 $("#tDesk").onclick = ()=> S.view==="desk" ? go(S.step) : go("desk");
 $("#tSet").onclick = ()=> S.view==="settings" ? go(S.step) : go("settings");
@@ -588,7 +693,7 @@ async function startCamera(){
       catch(e){ return await Cls.createFromOptions(fs, {...opts, baseOptions:{modelAssetPath:model, delegate:"CPU"}}); }
     };
     S.face = await make(FaceLandmarker, {runningMode:"VIDEO", numFaces:1, outputFacialTransformationMatrixes:true, outputFaceBlendshapes:true}, FACE_MODEL);
-    S.pose = await make(PoseLandmarker, {runningMode:"VIDEO", numPoses:1, outputSegmentationMasks:true}, POSE_MODEL);
+    S.pose = await make(PoseLandmarker, {runningMode:"VIDEO", numPoses:1}, POSE_MODEL);
   }catch(e){
     panel.insertAdjacentHTML("beforeend", `<p class="note" style="color:var(--bad)">Le moteur d'analyse n'a pas pu se charger. Vérifiez Internet puis rechargez la page.</p>`);
     if(btn) btn.textContent = "Moteur indisponible";
@@ -659,25 +764,6 @@ function boostExposure(track){
   }catch(e){}
 }
 
-/* ================= Flou de l'arrière-plan (aperçu seulement) ================= */
-const view = $("#view"), vctx = view.getContext("2d"), maskC = document.createElement("canvas"), mctx = maskC.getContext("2d"), tmpC = document.createElement("canvas"), tctx = tmpC.getContext("2d");
-let maskReady = false, maskImg = null;
-function updateMask(f, w, h){
-  if(maskC.width !== w || maskC.height !== h){ maskC.width = w; maskC.height = h; maskImg = mctx.createImageData(w, h); }
-  const d = maskImg.data; for(let i=0, j=3; i<f.length; i++, j+=4) d[j] = f[i]*255;
-  mctx.putImageData(maskImg, 0, 0); maskReady = true;
-}
-function renderView(src){
-  if(!S.prefs.blur || !maskReady){ view.hidden = true; return; }
-  const w = 640, h = Math.round(w*video.videoHeight/video.videoWidth);
-  if(view.width !== w || view.height !== h){ view.width = tmpC.width = w; view.height = tmpC.height = h; }
-  vctx.filter = "blur(18px)"; vctx.drawImage(src, -20, -20, w+40, h+40); vctx.filter = "none";   // fond flou (débordé pour éviter les bords)
-  tctx.globalCompositeOperation = "copy"; tctx.drawImage(src, 0, 0, w, h);
-  tctx.globalCompositeOperation = "destination-in"; tctx.drawImage(maskC, 0, 0, w, h);          // la personne seule, nette
-  vctx.drawImage(tmpC, 0, 0);
-  view.hidden = false;
-}
-
 /* ================= Mesure image par image ================= */
 const elev = v => Math.atan2(v[1], Math.hypot(v[0], v[2])) * DEG;
 function loop(){
@@ -687,12 +773,6 @@ function loop(){
   let fr, pr = null;
   try{ fr = S.face.detectForVideo(src, ts); }catch(e){ return; }
   if(S.tick++ % 3 === 0){ try{ pr = S.pose.detectForVideo(src, ts); }catch(e){} }
-  if(pr && pr.segmentationMasks?.[0]){
-    const mk = pr.segmentationMasks[0];
-    if(S.prefs.blur){ try{ updateMask(mk.getAsFloat32Array(), mk.width, mk.height); }catch(e){} }
-    try{ mk.close(); }catch(e){}
-  }
-  renderView(src);
   if(pr){
     const P = pr.landmarks?.[0];
     if(P && (P[11].visibility ?? 1) > .5 && (P[12].visibility ?? 1) > .5){
@@ -1326,9 +1406,6 @@ function renderSettings(){
       <div class="btns"><button id="notif2">Activer les notifications du Mac</button></div>
       <p class="note">Une mauvaise posture s'affiche tout de suite ; le son et la notification attendent ce délai. Ensuite, 2 minutes minimum entre deux alertes. Bilan à 12 h 30 et 17 h 30.</p>
     </section>
-    <section class="set"><h3>Caméra</h3>
-      <label class="check"><input type="checkbox" id="blur" ${P.blur?"checked":""}>Flouter l'arrière-plan de l'image</label>
-      <p class="note">Seul l'aperçu est flouté : l'analyse n'en dépend pas. Rien n'est enregistré ni envoyé.</p>
     </section>`;
   $("#back").onclick = ()=>go(S.step);
   panel.querySelectorAll(".segb").forEach(b=>b.onclick = ()=>{ P[b.dataset.k] = b.dataset.v; savePrefs(); applyTheme(); renderSettings(); });
@@ -1339,7 +1416,6 @@ function renderSettings(){
   $("#vol").onchange = ()=>playSound(P.sound === "aucun" || P.sound === "voix" ? "carillon" : P.sound);
   $("#delay").value = String(P.delay); $("#delay").onchange = e=>{ P.delay = +e.target.value; savePrefs(); };
   $("#notif2").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif2").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif2").textContent = "Indisponible"; } };
-  $("#blur").onchange = e=>{ P.blur = e.target.checked; savePrefs(); if(!P.blur) $("#view").hidden = true; };
 }
 
 /* ================= Mon poste : check-list visuelle (INRS) ================= */
@@ -1437,18 +1513,39 @@ function updatePip(cls, title, action){
 }
 
 /* ================= Surimpression ================= */
+// Gabarit : où placer la tête (ovale) et les épaules (trait) pour une mesure fiable
+function drawGuide(Wc, Hc, m){
+  const dpr = devicePixelRatio, cx = Wc/2, cy = Hc*.36, rh = Hc*.2, rw = rh*.74;
+  let ok = false;
+  if(m){
+    const sc = Math.max(Wc/m.W, Hc/m.H), ox = (Wc - m.W*sc)/2, oy = (Hc - m.H*sc)/2;
+    const fx = ox + m.eu*m.W*sc, fy = oy + m.ev*m.H*sc, fhPx = m.fh*m.H*sc;
+    ok = Math.abs(fx - cx) < rw*.45 && Math.abs(fy - cy) < rh*.4 && fhPx > rh*1.1 && fhPx < rh*2.2;
+  }
+  octx.save();
+  octx.strokeStyle = ok ? "rgba(76,196,126,.95)" : "rgba(255,255,255,.75)"; octx.lineWidth = 2.5*dpr; octx.setLineDash([9*dpr, 7*dpr]);
+  octx.beginPath(); octx.ellipse(cx, cy, rw, rh, 0, 0, 7); octx.stroke();
+  octx.beginPath(); octx.moveTo(cx - Wc*.3, Hc*.9); octx.quadraticCurveTo(cx, Hc*.8, cx + Wc*.3, Hc*.9); octx.stroke();
+  octx.setLineDash([]); octx.fillStyle = ok ? "rgba(76,196,126,.95)" : "rgba(255,255,255,.85)";
+  octx.font = `600 ${13*dpr}px "Instrument Sans", system-ui, sans-serif`; octx.textAlign = "center";
+  octx.fillText(ok ? "Bien placé" : "Placez votre tête dans l'ovale", cx, cy + rh + 22*dpr);
+  octx.restore();
+}
 function drawOverlay(m){
   const r = overlay.getBoundingClientRect(), dpr = devicePixelRatio;
   if(!r.width) return;
   if(overlay.width !== Math.round(r.width*dpr)){ overlay.width = Math.round(r.width*dpr); overlay.height = Math.round(r.height*dpr); }
   const Wc = overlay.width, Hc = overlay.height; octx.clearRect(0,0,Wc,Hc);
+  const showGuide = S.view === "measure" && !S.busy;
+  if(!m && !showGuide) return;
+  if(showGuide) drawGuide(Wc, Hc, m);
   if(!m) return;
   const sc = Math.max(Wc/m.W, Hc/m.H), ox = (Wc - m.W*sc)/2, oy = (Hc - m.H*sc)/2;
   const P = p => [ox + p.x*m.W*sc, oy + p.y*m.H*sc];
   const [, ey] = P({x:m.eu, y:m.ev});
-  octx.setLineDash([6*dpr, 6*dpr]); octx.strokeStyle = "rgba(95,224,198,.9)"; octx.lineWidth = 2.5*dpr;
+  octx.setLineDash([6*dpr, 6*dpr]); octx.strokeStyle = "rgba(242,179,61,.95)"; octx.lineWidth = 2.5*dpr;
   octx.beginPath(); octx.moveTo(0, ey); octx.lineTo(Wc, ey); octx.stroke(); octx.setLineDash([]);
-  [468,473,1].forEach(i=>{ const [x,y] = P(m.L[i]); octx.fillStyle = "#5FE0C6"; octx.beginPath(); octx.arc(x,y,4*dpr,0,7); octx.fill(); });
+  [468,473,1].forEach(i=>{ const [x,y] = P(m.L[i]); octx.fillStyle = "#F2B33D"; octx.beginPath(); octx.arc(x,y,4*dpr,0,7); octx.fill(); });
   // axe de la tête (front → menton)
   { const [x1,y1] = P(m.L[10]), [x2,y2] = P(m.L[152]); octx.strokeStyle = "rgba(255,255,255,.8)"; octx.lineWidth = 2*dpr; octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke(); }
   if(m.P){
@@ -1462,6 +1559,8 @@ window.addEventListener("beforeunload", saveHist);
 window.__nd = {setPipDoc:d=>{pipDoc=d}, cal, onMeasure:m=>onMeasure(m), S, go, screenAdvice, addToSeries, currentScreen, recordHist, hist};
 go("prep");
 if("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+// App installée : fenêtre étroite au premier lancement (on peut la redimensionner ensuite)
+try{ if(matchMedia("(display-mode: standalone)").matches && !store.get("nd_sized", false)){ window.resizeTo(460, 900); store.set("nd_sized", true); } }catch(e){}
 </script>
 </body>
 </html>
