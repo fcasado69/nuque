@@ -462,6 +462,15 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
+const APP_VERSION = "7 · 23 nov. 17 h 15";
+/* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
+try{
+  if("serviceWorker" in navigator){
+    let had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(!had){ had = true; return; } if(!S.watching) location.reload(); else S.updateReady = true; });
+    navigator.serviceWorker.getRegistration().then(r=>r && r.update()).catch(()=>{});
+  }
+}catch(e){}
 /* ================= Navigation ================= */
 const ORDER = ["prep","measure","result","watch"];
 function go(view){
@@ -1417,6 +1426,7 @@ function renderSettings(){
   const P = S.prefs, seg = (k, opts) => opts.map(([v,l])=>`<button class="segb ${P[k]===v?"sel":""}" data-k="${k}" data-v="${v}">${l}</button>`).join("");
   panel.innerHTML = `
     <div class="btns" style="justify-content:space-between"><h2>Réglages</h2><button class="link" id="back">← Retour</button></div>
+    <p class="note">Version ${APP_VERSION}</p>
     <section class="set"><h3>Apparence</h3>
       <div class="srow"><span>Thème</span><div class="seg">${seg("theme", [["auto","Auto"],["light","Clair"],["dark","Sombre"]])}</div></div>
       <div class="srow"><span>Couleur</span><div class="swatches">${Object.entries(ACCENTS).map(([k,[l,d,n]])=>`<button class="sw ${P.accent===k?"sel":""}" data-acc="${k}" title="${n}" aria-label="${n}" style="--c1:${l};--c2:${d}"></button>`).join("")}</div></div>
