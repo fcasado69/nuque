@@ -509,7 +509,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "12 · 23 nov. 17 h 35";
+const APP_VERSION = "13 · 23 nov. 17 h 40";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -645,8 +645,7 @@ const render = {
       <div class="tiles" id="checks"></div>
       <div class="preview">
         <div class="mini"><i style="top:22px"></i></div>
-        <span>${st.cam === "top" ? "Asseyez-vous bien droit, dos au dossier, et <b>regardez le rond</b> 3 secondes. C'est tout."
-          : "Asseyez-vous bien droit. Regardez d'abord <b>la caméra du MacBook</b>, puis <b>le rond</b> en haut, en bas et au milieu de cet écran."}</span>
+        <span>Asseyez-vous bien droit. Regardez d'abord <b>la caméra</b>, puis <b>le rond</b> en haut, en bas et au centre de cet écran. 4 points, environ 20 secondes.</span>
       </div>
       <div class="btns"><button class="primary" id="go" disabled>Lancer</button><button class="link" id="force" hidden>Lancer quand même</button></div>
       <p class="note" id="msg"></p>`;
@@ -661,7 +660,7 @@ const render = {
     const sc = currentScreen(), r = screenAdvice(b.sTop, b.sDist, sc.h), dc = distClass(b.sDist), rel = reliability();
     const howTxt = r.dir > 0 ? (sc.ext ? "Tirez l'écran vers le haut sur son pied, ou ajoutez un réhausseur." : "Posez le MacBook sur un support + clavier et souris externes.")
                  : r.dir < 0 ? (sc.ext ? "Descendez l'écran sur son pied ou retirez le réhausseur." : "Baissez le support du MacBook.") : "";
-    const confirmFirst = b.mode === "camera" ? false : (rel.n < 2 || !rel.agree);
+    const confirmFirst = b.mode === "camera" ? !rel.agree : (rel.n < 2 || !rel.agree);
     // Suivi en direct : dès qu'il faut bouger l'écran, le chiffre et le schéma suivent ses mouvements
     const live = r.dir !== 0 && S.running;
     const dotMode = b.mode === "regard" && b.kHead != null;
@@ -953,26 +952,25 @@ async function runCalibration(){
   const avgV = (arr, k) => { const v=[0,0,0]; arr.forEach(s=>{v[0]+=s[k][0];v[1]+=s[k][1];v[2]+=s[k][2];}); const n=Math.hypot(...v); return v.map(x=>x/n); };
   for(let i=3;i>0;i--){ calMsg("i-back", "Asseyez-vous bien droit", "Dos contre le dossier, épaules relâchées, comme pour bien travailler.", i); await wait(1000); if(S.cancel) return fail("Mesure annulée."); }
 
+  // 4 points de mesure, quelle que soit l'installation : la caméra, puis le haut, le bas et le centre de l'écran
   let K = null, camBelowK = null;
-  if(st.cam !== "top"){
-    // Cible précise : l'objectif de la caméra du MacBook
-    const where = st.cam === "below" ? "en dessous de cet écran" : "à côté de cet écran";
-    for(let i=3;i>0;i--){ calMsg("i-cam", "Regardez la caméra du MacBook", `Le petit point noir au-dessus de l'écran du MacBook, ${where}.`, i); await wait(1000); if(S.cancel) return fail("Mesure annulée."); }
+  {
+    const where = st.cam === "top" ? "Le petit point noir en haut de cet écran." : `Le petit point noir au-dessus de l'écran du MacBook, ${st.cam === "below" ? "en dessous de cet écran" : "à côté de cet écran"}.`;
+    for(let i=3;i>0;i--){ calMsg("i-cam", "1/4 · Regardez la caméra", where, i); await wait(1000); if(S.cancel) return fail("Mesure annulée."); }
     calMsg("i-cam", "Fixez la caméra… ne bougez plus", "", "●");
     K = summarize(await grab(2500)); beep(660,.1,true);
     if(!K) return fail("Visage pas assez visible en regardant la caméra. Recommencez.");
     // Angle de la caméra sous l'horizontale = inclinaison de son écran − élévation de l'œil dans l'image
     camBelowK = th - elev(avgV(K.sm, "c"));
   }
-  calMsg("i-face", "Regardez le rond", "", ""); await wait(1000);
+  calMsg("i-up", "2/4 · Regardez le rond tout en haut de l'écran", "Bougez seulement les yeux et la tête, pas le dos.", ""); await wait(1400);
+  const T = await lookAt(.04); if(S.cancel) return fail("Mesure annulée.");
+  calMsg("i-down", "3/4 · Regardez le rond tout en bas de l'écran", "", ""); await wait(1200);
+  const Bt = await lookAt(.96); if(S.cancel) return fail("Mesure annulée.");
+  calMsg("i-face", "4/4 · Regardez le rond au centre", "", ""); await wait(1200);
   const C = await lookAt(.5); if(S.cancel) return fail("Mesure annulée.");
-  let T = null, Bt = null;
-  if(st.cam !== "top"){
-    T = await lookAt(.04); if(S.cancel) return fail("Mesure annulée.");
-    Bt = await lookAt(.96); if(S.cancel) return fail("Mesure annulée.");
-  }
   endCal();
-  if(!C || (st.cam !== "top" && (!T || !Bt))) return fail("Visage perdu pendant la mesure. Vérifiez la lumière et recommencez.");
+  if(!C || !T || !Bt) return fail("Visage perdu pendant la mesure. Vérifiez la lumière et recommencez.");
   if(C.sd > 4) return fail("Vous avez bougé en regardant le rond. Restez immobile 2 secondes.");
 
   // Référence de posture : assis droit en regardant le centre de l'écran
@@ -981,8 +979,23 @@ async function runCalibration(){
     head0:C.head, eye0:C.eye, ev0:pm("ev"), fh0:pm("fh"), roll0:pm("roll"), yaw0:pm("yaw"), ratio0:pm("ratio"), lean0:pm("lean"), twist0:pm("twist"), squint0:pm("squint"), blink0:pm("blink"), theta:th, thetaSrc:st.tiltSrc, mode: st.cam === "top" ? "camera" : "regard"};
   let doubt = false, err = 0;
   if(st.cam === "top"){
+    // Méthode 1 : position de la caméra (juste au-dessus de l'écran)
     const c0 = avgV(ref, "c"), D = one.dist, camBelow = th - elev(c0);
-    one.sTop = at(tn(camBelow) + CAM_GAP_CM/D); one.sDist = D;
+    const topA = at(tn(camBelow) + CAM_GAP_CM/D);
+    // Méthode 2 : où va le regard quand vous fixez le haut, le bas et le centre
+    const down = P => camBelowK + (K.head - P.head) + (P.eye - K.eye);
+    const gT = down(T), gB = down(Bt), gC = down(C);
+    let topB = null, DB = null;
+    if(gB - gT >= 4){ DB = (Bt.fy - T.fy)*sc.h/(tn(gB) - tn(gT)); if(DB > 30 && DB < 140) topB = at(tn(gT) - T.fy*sc.h/DB); }
+    if(topB == null){ one.sTop = topA; one.sDist = D; doubt = true; err = 99; }
+    else {
+      const gap = D*(tn(topA) - tn(topB));          // écart entre les deux méthodes, en cm à votre distance
+      err = Math.round(Math.abs(gap));
+      if(err <= 4){ one.sTop = at((tn(topA) + tn(topB))/2); one.sDist = (D + DB)/2; }
+      else { one.sTop = topA; one.sDist = D; doubt = true; }
+      Object.assign(one, {checkA:topA, checkB:topB, checkGap:Math.round(gap)});
+    }
+    Object.assign(one, {camBelowK, kHead:K.head, kEye:K.eye});
   } else {
     const down = P => camBelowK + (K.head - P.head) + (P.eye - K.eye);   // regard sous l'horizontale
     const gT = down(T), gB = down(Bt), gC = down(C);
@@ -1142,7 +1155,14 @@ function reliability(){
   const ser = recentSeries(), sc = currentScreen(), b = curBase();
   const src = b?.thetaSrc === "mesure" ? "angle mesuré (± 1°)" : "inclinaison choisie sur le dessin (± 5°)";
   if(!ser.length) return {n:0, agree:false, text:"Mesure ancienne : refaites-en une pour la confirmer."};
-  if(b?.mode === "camera") return {n:ser.length, agree:true, text:`Calcul basé sur la caméra et l'${src}.`};
+  if(b?.mode === "camera"){
+    const last = ser[ser.length-1];
+    if(last.err == null || b.checkA == null) return {n:ser.length, agree:true, text:`Calcul basé sur la caméra et l'${src}.`};
+    if(last.err === 99) return {n:ser.length, agree:false, text:"Le regard vers le haut et le bas de l'écran n'a pas pu être mesuré : calcul par la caméra seule. Refaites une mesure en suivant bien le rond."};
+    return last.doubt
+      ? {n:ser.length, agree:false, text:`Les 2 méthodes (caméra et regard) diffèrent de ${last.err} cm. Refaites une mesure bien immobile, ou indiquez l'inclinaison exacte avec une appli niveau.`}
+      : {n:ser.length, agree:true, text:`Vérifié par 2 méthodes (caméra et regard sur 4 points) : écart de ${last.err} cm.`};
+  }
   const ds = ser.map(x=>screenAdvice(x.sTop, x.sDist, sc.h).delta);
   const spread = Math.round(Math.max(...ds) - Math.min(...ds));
   if(ser.length === 1) return {n:1, agree:!ser[0].doubt, text: ser[0].doubt ? `Contrôle imparfait (écart ${ser[0].err}°). Une 2e mesure confirmera le conseil.` : `Mesure contrôlée par le rond central (écart ${ser[0].err}°).`};
