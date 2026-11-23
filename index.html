@@ -519,7 +519,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "16 · 23 nov. 17 h 45";
+const APP_VERSION = "17 · 23 nov. 17 h 50";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -1040,6 +1040,21 @@ async function runCalibration(){
 /* ================= Réglage guidé en direct ================= */
 let G = null;
 let LR = null;
+/* Voix du réglage guidé, calme :
+   - on ne parle que quand l'écran a vraiment bougé, au plus toutes les 3 s ;
+   - « C'est bon » une seule fois, 4 s après le dernier mouvement, puis on valide. Pas de répétition à la limite de la zone. */
+function guideVoice(st, r, now, voiceOn){
+  if(st.refTop == null || Math.abs(st.top - st.refTop) > 0.5){ st.refTop = st.top; st.lastMove = now; }  // ~0,5 cm de mouvement
+  const still = now - (st.lastMove || now) >= 4000;
+  if(r.dir !== 0){
+    st.outSince = st.outSince || now;
+    if(now - st.outSince > 1500) st.okDone = false;              // vraiment sorti de la zone
+    if(!still && r.cm !== st.lastCm && now - (st.lastSay || 0) > 3000){ st.lastSay = now; st.lastCm = r.cm; say(r.dir > 0 ? `Encore ${r.cm} centimètres vers le haut` : `Descendez de ${r.cm} centimètres`, voiceOn); }
+    return false;
+  }
+  st.outSince = 0;
+  return still && !st.okDone;                                   // prêt à valider
+}
 function liveResultTick(m){
   if(!m){ setBadge("", "Visage non visible"); return; }
   const e = guideEstimate(m, LR, $("#lrDot"));
@@ -1053,16 +1068,11 @@ function liveResultTick(m){
     if(g) g.innerHTML = gaugeSVG(LR.top, LR.D, LR.sc.h, r);
     const f = $("#lrFacts"); if(f) f.innerHTML = factsHTML(r, LR.D, LR.sc);
   }
-  if(r.dir !== 0){
-    LR.okSince = 0; LR.saidOk = false;
-    if(r.cm !== LR.lastCm && now - LR.lastSay > 2200){ LR.lastSay = now; LR.lastCm = r.cm; say(r.dir > 0 ? `Encore ${r.cm} centimètres vers le haut` : `Descendez de ${r.cm} centimètres`, LR.voice); }
-    return;
-  }
-  if(!LR.okSince) LR.okSince = now;
-  if(!LR.saidOk){ LR.saidOk = true; LR.lastSay = now; say("C'est bon, ne bougez plus.", LR.voice); }
-  if(now - LR.okSince > 2500){
+  if(!guideVoice(LR, r, now, LR.voice)) return;
+  {
+    LR.okDone = true;
     const key = LR.sc.key, one = {...LR.b, sTop:LR.top, sDist:LR.D, doubt:false}, v = LR.voice;
-    LR = null; say("Parfait. L'écran est à la bonne hauteur.", v);
+    LR = null; say("C'est bon, l'écran est à la bonne hauteur.", v);
     S.series[key] = []; addToSeries(key, one); go("result");
   }
 }
@@ -1136,7 +1146,7 @@ function guideShow(r){
   box.className = "cal guide" + (ok ? " ok" : "");
   $("#gArrow").setAttribute("href", ok ? "#i-check" : r.dir > 0 ? "#i-up" : "#i-down");
   $("#gNum").textContent = ok ? "OK" : `${r.cm} cm`;
-  $("#gTxt").textContent = ok ? "C'est bon, ne bougez plus" : r.dir > 0 ? "Montez encore" : "Descendez";
+  $("#gTxt").textContent = ok ? "Dans la zone : laissez l'écran ainsi" : r.dir > 0 ? "Montez encore" : "Descendez";
   const span = 55, pos = a => Math.max(0, Math.min(100, (a + 10)/span*100));
   $("#gZone").style.top = pos(r.lo) + "%"; $("#gZone").style.height = (pos(r.hi) - pos(r.lo)) + "%";
   $("#gMark").style.top = pos(r.center) + "%";
@@ -1148,18 +1158,11 @@ function guideTick(m){
   G.top = G.top == null ? e.top : G.top + 0.2*(e.top - G.top); G.D = e.D;
   const r = screenAdvice(G.top, G.D, G.sc.h), now = Date.now();
   guideShow(r);
-  if(r.dir !== 0){
-    G.okSince = 0; G.saidOk = false;
-    if(r.cm !== G.lastCm && now - G.lastSay > 2200){ G.lastSay = now; G.lastCm = r.cm; say(r.dir > 0 ? `Encore ${r.cm} centimètres vers le haut` : `Descendez de ${r.cm} centimètres`); }
-    return;
-  }
-  if(!G.okSince) G.okSince = now;
-  if(!G.saidOk){ G.saidOk = true; G.lastSay = now; say("C'est bon, ne bougez plus."); }
-  if(now - G.okSince > 2500) guideDone(G.top, G.D);
+  if(guideVoice(G, r, now)){ G.okDone = true; guideDone(G.top, G.D); }
 }
 function guideDone(top, D){
   const b = G.b, key = G.sc.key;
-  say("Parfait. L'écran est à la bonne hauteur.");
+  say("C'est bon, l'écran est à la bonne hauteur.");
   S.series[key] = []; addToSeries(key, {...b, sTop:top, sDist:D, doubt:false});
   $("#gTxt").textContent = "Parfait !"; $("#gNum").textContent = "OK";
   const g = G; G = null;
