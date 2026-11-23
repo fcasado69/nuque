@@ -282,6 +282,11 @@ body.compact .qa button{padding:7px 4px;font-size:.72rem} body.compact .qa svg{w
 .p-tip{flex-basis:100%;font-size:.88rem}
 .p-btns{display:flex;gap:8px;align-items:center}
 .p-btns button{padding:8px 14px} .p-btns button.primary{font-size:.95rem;padding:8px 16px}
+.pv{display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px 12px;border-radius:14px;background:var(--sunk);border-top:5px solid var(--accent);text-align:center}
+.pv.brk{border-top-color:var(--good)}
+.pv-ph{font-weight:700;color:var(--muted)}
+.pv-time{font-family:var(--f-mono);font-size:3.6rem;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+body.compact .pv-time{font-size:2.6rem}
 body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -504,7 +509,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "10 · 23 nov. 17 h 40";
+const APP_VERSION = "11 · 23 nov. 17 h 30";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -542,9 +547,10 @@ function go(view){
     const i = ORDER.indexOf(li.dataset.s), c = ORDER.indexOf(S.step), main = ORDER.includes(view);
     li.className = main && i===c ? "on" : (i<c ? "done" : "");
   });
-  $("#tHist").classList.toggle("on", view==="history"); $("#tSet").classList.toggle("on", view==="settings"); $("#tDesk").classList.toggle("on", view==="desk");
+  $("#tHist").classList.toggle("on", view==="history"); $("#tSet").classList.toggle("on", view==="settings"); $("#tDesk").classList.toggle("on", view==="desk"); $("#tPomo").classList.toggle("on", view==="pomo");
   render[view]();
   sizeStage();
+  try{ renderPomo(); }catch(e){}
 }
 function sizeStage(){
   const auto = S.view !== "measure";
@@ -578,7 +584,7 @@ $("#tSet").onclick = ()=> S.view==="settings" ? go(S.step) : go("settings");
 function applyCompact(){
   const on = !!S.prefs.compact || innerWidth < 560 || innerHeight < 640;
   document.body.classList.toggle("compact", on);
-  $("#tSmall").classList.toggle("on", !!S.prefs.compact);
+
   $("#tSmall").title = S.prefs.compact ? "Agrandir la fenêtre" : "Petite fenêtre dans un coin"; $("#tSmallL").textContent = S.prefs.compact ? "Agrandir" : "Réduire";
 }
 $("#tSmall").onclick = ()=>{
@@ -705,11 +711,12 @@ const render = {
     const rc2 = $("#recal2"); if(rc2) rc2.onclick = ()=>go("measure");
     $("#notif").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif").textContent = "Indisponible"; } };
     $("#pip").onclick = openPip;
-    $("#qPomo").onclick = ()=>{ S.prefs.pomoShow = true; savePrefs(); renderPomo(); if(P0().phase === "idle") pomoStart(); };
+    $("#qPomo").onclick = ()=>go("pomo");
     renderCheer();
     $("#stopW").onclick = ()=>{ S.watching = false; $("#watchDot").hidden = true; saveHist(); go("prep"); };
     if(S.watch?.breakDue) showBreak();
   },
+  pomo(){ renderPomoView(); },
   history(){ renderHistory(); },
   desk(){ renderDesk(); },
   settings(){ renderSettings(); },
@@ -1417,7 +1424,7 @@ function pomoLeft(){ return POMO.end ? Math.max(0, (POMO.end - Date.now())/1000)
 function pomoSave(){ store.set("nd4_pomo", POMO); }
 function pomoStart(){ unlockAudio(); if(POMO.phase === "idle") POMO.phase = "work"; POMO.end = Date.now() + 1000*pomoLeft(); POMO.left = null; pomoSave(); renderPomo(); }
 function pomoPause(){ POMO.left = pomoLeft(); POMO.end = null; pomoSave(); renderPomo(); }
-function pomoStop(){ POMO = {phase:"idle", end:null, left:null, n:0}; pomoSave(); S.prefs.pomoShow = false; savePrefs(); renderPomo(); }
+function pomoStop(){ POMO = {phase:"idle", end:null, left:null, n:0}; pomoSave(); renderPomo(); }
 function pomoNext(auto){
   if(POMO.phase === "work" || POMO.phase === "idle"){
     POMO.n++; POMO.phase = "break"; POMO.tip = pick(POMO_TIPS); POMO.left = null; POMO.end = Date.now() + 1000*pDur("break");
@@ -1433,7 +1440,8 @@ function pomoNext(auto){
 function pomoPipTxt(){ return POMO.phase !== "idle" && POMO.end ? `${POMO.phase === "break" ? "Pause" : "⏱"} ${mmss(pomoLeft())}` : ""; }
 function renderPomo(){
   const box = $("#pomo"); if(!box) return;
-  const show = S.prefs.pomoShow || POMO.phase !== "idle"; box.hidden = !show; $("#tPomo").classList.toggle("on", show);
+  if(S.view === "pomo") renderPomoView(true);
+  const show = POMO.phase !== "idle" && S.view !== "pomo"; box.hidden = !show;
   if(!show) return;
   const brk = POMO.phase === "break", running = !!POMO.end;
   box.classList.toggle("brk", brk);
@@ -1450,10 +1458,35 @@ function renderPomo(){
 $("#pGo").onclick = ()=> POMO.end ? pomoPause() : pomoStart();
 $("#pSkip").onclick = ()=> pomoNext(false);
 $("#pStop").onclick = pomoStop;
-$("#tPomo").onclick = ()=>{ if(POMO.phase !== "idle"){ return; } S.prefs.pomoShow = !S.prefs.pomoShow; savePrefs(); renderPomo(); };
+$("#tPomo").onclick = ()=> S.view === "pomo" ? go(S.step) : go("pomo");
+function renderPomoView(update){
+  const brk = POMO.phase === "break", running = !!POMO.end, P = S.prefs;
+  if(update && $("#pvTime")){
+    $("#pvTime").textContent = mmss(pomoLeft()); $("#pvPh").textContent = POMO.phase === "idle" ? "Prêt" : brk ? "Pause" : "Concentration";
+    $("#pvGo").textContent = running ? (brk ? "Suspendre" : "Mettre en pause") : (POMO.phase === "idle" ? "Démarrer" : "Reprendre");
+    $("#pvSkip").hidden = POMO.phase === "idle"; $("#pvSkip").textContent = brk ? "Finir la pause" : "Passer à la pause";
+    $("#pvTip").hidden = !brk; if(brk) $("#pvTip").textContent = POMO.tip || ""; $("#pvBox").className = "pv " + (brk ? "brk" : "");
+    $("#pvN").textContent = POMO.n ? `${POMO.n} session${POMO.n > 1 ? "s" : ""} terminée${POMO.n > 1 ? "s" : ""} aujourd'hui` : "Aucune session terminée pour l'instant";
+    return;
+  }
+  panel.innerHTML = `
+    <div class="btns" style="justify-content:space-between"><h2>Pomodoro</h2><button class="link" id="back">← Retour</button></div>
+    <div class="pv" id="pvBox"><span class="pv-ph" id="pvPh"></span><span class="pv-time" id="pvTime"></span><span class="note" id="pvN"></span><div class="p-tip" id="pvTip" hidden></div></div>
+    <div class="btns"><button class="primary" id="pvGo"></button><button id="pvSkip"></button><button class="link" id="pvStop">Arrêter</button></div>
+    <div class="srow"><label for="pw2">Concentration</label><select id="pw2">${[15,20,25,30,45,50].map(v=>`<option value="${v}" ${(P.pomoW??25)===v?"selected":""}>${v} min</option>`).join("")}</select></div>
+    <div class="srow"><label for="pb2">Pause</label><select id="pb2">${[3,5,10].map(v=>`<option value="${v}" ${(P.pomoB??5)===v?"selected":""}>${v} min</option>`).join("")}</select></div>
+    <p class="note">Concentrez-vous ${P.pomoW ?? 25} min, puis pause de ${P.pomoB ?? 5} min (pause longue toutes les 4 sessions). Le minuteur continue si vous changez d'onglet : il s'affiche en haut et dans la pastille. Pendant la pause, les alertes de posture se taisent.</p>`;
+  $("#back").onclick = ()=>go(S.step);
+  $("#pvGo").onclick = ()=> POMO.end ? pomoPause() : pomoStart();
+  $("#pvSkip").onclick = ()=> pomoNext(false);
+  $("#pvStop").onclick = pomoStop;
+  [["#pw2","pomoW"],["#pb2","pomoB"]].forEach(([id,k])=>$(id).onchange = e=>{ P[k] = +e.target.value; savePrefs(); if(POMO.phase !== "idle" && !POMO.end) POMO.left = null; renderPomoView(); });
+  renderPomoView(true);
+}
 setInterval(()=>{
   if(POMO.end && Date.now() >= POMO.end) pomoNext(true);
-  if(POMO.phase !== "idle" || S.prefs.pomoShow){ const t = $("#pTime"); if(t) t.textContent = mmss(pomoLeft()); }
+  if(POMO.phase !== "idle"){ const t = $("#pTime"); if(t) t.textContent = mmss(pomoLeft()); }
+  if(S.view === "pomo") renderPomoView(true);
   if(POMO.end && !S.watching){ const pt = pomoPipTxt(); if(pt) updatePip("", pt, POMO.phase === "break" ? "Bougez un peu" : "Concentration"); }
 }, 1000);
 renderPomo();
@@ -1807,7 +1840,13 @@ function drawOverlay(m){
 
 window.addEventListener("beforeunload", saveHist);
 window.__nd = {setPipDoc:d=>{pipDoc=d}, cal, onMeasure:m=>onMeasure(m), S, go, screenAdvice, addToSeries, currentScreen, recordHist, hist};
-go("prep");
+// Ouverture : si une mesure existe, le suivi se lance tout de suite
+(async ()=>{
+  if(!curBase()) return go("prep");
+  go("prep");
+  panel.innerHTML = `<div class="hero"><div class="disc">${ico("i-cam")}</div><div><div class="big" style="font-size:1.4rem">Démarrage du suivi…</div><div class="muted">Caméra et analyse en cours de chargement.</div></div></div>`;
+  if(await startCamera()) startWatch(); else { const err = panel.querySelector(".note")?.outerHTML || ""; render.prep(); if(err) panel.insertAdjacentHTML("beforeend", err); }
+})();
 if("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 // App installée : fenêtre étroite au premier lancement (on peut la redimensionner ensuite)
 try{ if(matchMedia("(display-mode: standalone)").matches && !store.get("nd_sized", false)){ window.resizeTo(460, 900); store.set("nd_sized", true); } }catch(e){}

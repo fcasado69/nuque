@@ -1,5 +1,5 @@
 // Nuque Droite : mise en cache pour fonctionner hors ligne après la première ouverture
-const CACHE = "nuque-droite-v10";
+const CACHE = "nuque-droite-v11";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 const RUNTIME = ["cdn.jsdelivr.net", "storage.googleapis.com", "fonts.googleapis.com", "fonts.gstatic.com"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
