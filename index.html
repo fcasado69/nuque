@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Nuque Droite</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#1D5C68">
+<meta name="theme-color" content="#0E7566">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout : caméra à gauche, carte d'action à droite. Pictogrammes plutôt que texte. Calibration plein écran avec un rond. */
 :root{
@@ -208,100 +208,24 @@ table.cmp td.ok{color:var(--good);font-weight:600} table.cmp td.ko{color:var(--w
 .g-actions button{background:#162120;color:#EAF2EF;border-color:#33463F}
 .g-voice{display:flex;align-items:center;gap:6px;color:#9FB4AE;font-size:.9rem}
 
-/* ============ Refonte : instrument de mesure compact ============
-   Layout : une seule colonne étroite (≈ 420 px) à garder sur le côté de l'écran.
-   Motif : le fil à plomb des kinés (trait vertical + plomb), couleur signal ambre. */
-:root{
-  --bg:#F3F4F1; --surface:#FFFFFF; --sunk:#ECEEEA; --ink:#172026; --muted:#5B6670; --line:#D5D9D4;
-  --accent:#1D5C68; --accent-ink:#FFFFFF; --signal:#D99419; --good:#2C7A45; --warn:#A86300; --bad:#B4391C; --pain:#6E3A8E;
-  --f-display:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
-  --f-body:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
-  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
-  --r:6px;
-}
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#0F1517; --surface:#161E21; --sunk:#11181A; --ink:#E5EBEB; --muted:#8C999E; --line:#283337;
-  --accent:#7CC6D2; --accent-ink:#0B1416; --signal:#F2B33D; --good:#5CC27E; --warn:#E9A93F; --bad:#F07A55; --pain:#C59AE6; color-scheme:dark } }
-:root[data-theme="dark"]{
-  --bg:#0F1517; --surface:#161E21; --sunk:#11181A; --ink:#E5EBEB; --muted:#8C999E; --line:#283337;
-  --accent:#7CC6D2; --accent-ink:#0B1416; --signal:#F2B33D; --good:#5CC27E; --warn:#E9A93F; --bad:#F07A55; --pain:#C59AE6; color-scheme:dark }
-body{padding-block:14px 32px}
-.wrap{max-width:440px;gap:14px}
-.grid{grid-template-columns:minmax(0,1fr)!important;gap:14px}
+/* ===== Format compact (une colonne à garder sur le côté) et outils en icônes ===== */
+.wrap{max-width:460px}
+.grid{grid-template-columns:minmax(0,1fr)!important}
 header{flex-wrap:nowrap}
-h1{font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:1.35rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
-h1 .plumb{width:14px;height:24px;fill:var(--signal);stroke:var(--signal);stroke-width:1.6}
-h2{font-stretch:88%;font-weight:700;font-size:1.3rem;letter-spacing:-.005em}
-h3{font-weight:600;font-size:.98rem}
-.hright{gap:4px;flex-wrap:nowrap}
-.tool{width:36px;height:36px;padding:0;justify-content:center;border-radius:var(--r);border-color:transparent;background:transparent;position:relative}
-.tool svg{width:20px;height:20px;color:var(--ink)}
-.tool:hover{background:var(--sunk)}
-.tool.on{background:var(--ink)} .tool.on svg{color:var(--bg)}
+.hright{gap:6px;flex-wrap:nowrap}
+.tool{width:38px;height:38px;padding:0;justify-content:center;border-radius:999px;position:relative}
+.tool svg{width:20px;height:20px}
 .tool .live-dot{position:absolute;top:6px;right:6px;width:7px;height:7px}
-.steps{gap:0;border-bottom:1px solid var(--line);flex-wrap:nowrap}
-.steps li{flex:1;justify-content:center;border:none;border-radius:0;padding:6px 2px 8px;font-size:.82rem;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
-.steps li b{font-family:var(--f-mono);font-weight:400;color:var(--muted)}
-.steps li.on{background:none;color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
-.steps li.done{color:var(--muted);border-color:transparent}
-.steps li.done b{color:var(--good)}
-.stage{border-radius:var(--r);aspect-ratio:4/3;transition:aspect-ratio .2s}
+.steps{flex-wrap:nowrap;justify-content:space-between}
+.steps li{padding:5px 10px}
+.stage{transition:aspect-ratio .2s}
 .stage.mini{aspect-ratio:16/5}
-.stage.mini .badge{top:8px;left:8px} .stage.mini .enh{display:none}
-.cam-size{position:absolute;right:8px;bottom:8px;width:30px;height:30px;padding:0;border-radius:var(--r);background:rgba(10,15,17,.6);border:none;display:grid;place-items:center}
+.stage.mini .enh{display:none}
+.cam-size{position:absolute;right:10px;bottom:10px;width:32px;height:32px;padding:0;border-radius:999px;background:rgba(8,14,13,.65);border:none;display:grid;place-items:center}
 .cam-size svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
-.badge,.enh{border-radius:var(--r);font-size:.72rem;padding:3px 8px}
-.enh{background:rgba(242,179,61,.92);color:#1B1305}
-.panel{border-radius:var(--r);padding:18px;gap:16px}
-button{border-radius:var(--r);padding:9px 14px}
-button.primary{font-size:1rem;padding:12px 18px;border-radius:var(--r)}
-.tiles{gap:6px}
-.tile{background:transparent;border:1px solid var(--line);border-radius:var(--r);padding:10px 6px;font-size:.78rem}
-.tile svg{width:30px;height:30px}
-.tile.ko{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 8%,transparent)}
-button.tile.ok{background:color-mix(in srgb,var(--good) 7%,transparent)}
-.pill{border-radius:var(--r);background:transparent;border:1px solid var(--line);padding:8px 10px}
-.pill svg{width:22px;height:22px}
-.pill.warn{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 7%,transparent)}
-.hero{background:transparent;border:1px solid var(--line);border-left:5px solid var(--muted);border-radius:var(--r);padding:12px 14px;gap:12px}
-.hero .disc{width:40px;height:40px;border-radius:var(--r)}
-.hero .disc svg{width:24px;height:24px}
-.hero .big{font-stretch:88%;font-weight:700;font-size:1.45rem;line-height:1.1}
-.hero .num{font-size:.95rem}
-.hero.good{border-left-color:var(--good)} .hero.warn{border-left-color:var(--warn)} .hero.bad{border-left-color:var(--bad)}
-.facts{gap:0;border:1px solid var(--line);border-radius:var(--r)}
-.fact{background:transparent;border-radius:0;padding:10px 6px}
-.fact + .fact{border-left:1px solid var(--line)}
-.fact .n{font-size:1.15rem}
-.bar{height:4px;border-radius:2px}
-.mon{grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.mt{border-radius:0;border-left:3px solid var(--line);border-bottom:1px solid var(--line);background:transparent;padding:7px 8px}
-.mt:nth-child(odd){border-right:1px solid var(--line)}
-.how{border-radius:var(--r)}
-.preview{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
-.opts{gap:6px}
-.opt{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
-.opt.sel{border:2px solid var(--accent)}
-.livebar{border-radius:var(--r)}
-details{border-radius:var(--r)}
-.panel details{background:transparent;border:1px solid var(--line);padding:8px 12px}
-.seg{border-radius:var(--r)} .segb{border-radius:4px}
-.snd{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
-.snd.sel{border:2px solid var(--accent)}
+.mon{grid-template-columns:repeat(2,minmax(0,1fr))}
 .sounds{grid-template-columns:repeat(2,minmax(0,1fr))}
-.rf{border-radius:var(--r);background:transparent;border:1px solid var(--line)}
-.insight{border-radius:var(--r)}
-.break{border-radius:var(--r)}
-.painrow button{border-radius:4px;width:34px;height:34px}
-.chip{border-radius:var(--r)}
-.chosen{border-radius:var(--r)}
-.cal-msg svg{color:#F2B33D}
-.cal-msg .n{color:#F2B33D}
-.cal-dot,.g-dot,.lrdot{background:#F2B33D}
-.g-arrow{color:#F2B33D} .g-num{color:#F2B33D}
-.g-zone{border-radius:3px}
-.preview .mini i{background:#F2B33D}
-.opt svg .cam{fill:var(--signal)}
+.opts{grid-template-columns:repeat(auto-fit,minmax(78px,1fr))}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -357,7 +281,7 @@ details{border-radius:var(--r)}
 
 <div class="wrap">
   <header>
-    <h1><svg class="plumb" viewBox="0 0 20 32" aria-hidden="true"><path d="M10 1v20"/><path d="M10 21l-4.5 5.5L10 31l4.5-4.5z"/></svg>Nuque Droite</h1>
+    <h1>Nuque <span>Droite</span></h1>
     <div class="hright">
       <button class="tool" id="tDesk" title="Mon poste" aria-label="Mon poste"><svg><use href="#i-desk"/></svg></button>
       <button class="tool" id="tHist" title="Historique" aria-label="Historique"><svg><use href="#i-chart"/></svg><span class="live-dot" id="watchDot" hidden title="Suivi en cours"></span></button>
@@ -438,7 +362,7 @@ const store = {
 };
 const S = {
   step:"prep", view:"prep",
-  prefs: Object.assign({progressive:false, sound:"carillon", volume:.6, delay:30, overrides:{}, camMode:"auto", theme:"auto", accent:"petrole", textSize:"normal"}, store.get("nd4_prefs", {})),
+  prefs: Object.assign({progressive:false, sound:"carillon", volume:.6, delay:30, overrides:{}, camMode:"auto", theme:"auto", accent:"sapin", textSize:"normal"}, store.get("nd4_prefs", {})),
   bases: store.get("nd5_bases", {}),        // une mesure par écran
   series: store.get("nd5_series", {}),      // mesures récentes par écran
   hist: store.get("nd4_hist", {}),
@@ -452,10 +376,10 @@ const savePrefs = ()=>store.set("nd4_prefs", S.prefs);
 if(typeof S.prefs.sound !== "string") S.prefs.sound = "carillon";
 
 /* ================= Apparence ================= */
-const ACCENTS_KEYS = ["petrole","ambre","ocean","prune","corail","ardoise"];
-const ACCENTS = {petrole:["#1D5C68","#7CC6D2","Pétrole"], ambre:["#8A5300","#F2B33D","Ambre"], ocean:["#2B4FA0","#8FB0F2","Océan"], prune:["#6E3A8E","#C59AE6","Prune"], corail:["#A9432A","#F08A64","Corail"], ardoise:["#3D4B5C","#A9B8CA","Ardoise"]};
+const ACCENTS_KEYS = ["sapin","ocean","prune","corail","ardoise"];
+const ACCENTS = {sapin:["#0E7566","#3CBFA8","Sapin"], ocean:["#1F5FA8","#6FA8F0","Océan"], prune:["#7A3E9D","#C08BEA","Prune"], corail:["#B9472A","#F08A64","Corail"], ardoise:["#3D4B5C","#A3B4C8","Ardoise"]};
 function applyTheme(){
-  if(!ACCENTS_KEYS.includes(S.prefs.accent)) S.prefs.accent = "petrole";
+  if(!ACCENTS_KEYS.includes(S.prefs.accent)) S.prefs.accent = "sapin";
   const r = document.documentElement;
   if(S.prefs.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", S.prefs.theme);
   const [l, d] = ACCENTS[S.prefs.accent] || ACCENTS.sapin;
@@ -1527,7 +1451,7 @@ function drawGuide(Wc, Hc, m){
   octx.beginPath(); octx.ellipse(cx, cy, rw, rh, 0, 0, 7); octx.stroke();
   octx.beginPath(); octx.moveTo(cx - Wc*.3, Hc*.9); octx.quadraticCurveTo(cx, Hc*.8, cx + Wc*.3, Hc*.9); octx.stroke();
   octx.setLineDash([]); octx.fillStyle = ok ? "rgba(76,196,126,.95)" : "rgba(255,255,255,.85)";
-  octx.font = `600 ${13*dpr}px "Instrument Sans", system-ui, sans-serif`; octx.textAlign = "center";
+  octx.font = `600 ${13*dpr}px Inter, system-ui, sans-serif`; octx.textAlign = "center";
   octx.fillText(ok ? "Bien placé" : "Placez votre tête dans l'ovale", cx, cy + rh + 22*dpr);
   octx.restore();
 }
@@ -1543,9 +1467,9 @@ function drawOverlay(m){
   const sc = Math.max(Wc/m.W, Hc/m.H), ox = (Wc - m.W*sc)/2, oy = (Hc - m.H*sc)/2;
   const P = p => [ox + p.x*m.W*sc, oy + p.y*m.H*sc];
   const [, ey] = P({x:m.eu, y:m.ev});
-  octx.setLineDash([6*dpr, 6*dpr]); octx.strokeStyle = "rgba(242,179,61,.95)"; octx.lineWidth = 2.5*dpr;
+  octx.setLineDash([6*dpr, 6*dpr]); octx.strokeStyle = "rgba(95,224,198,.9)"; octx.lineWidth = 2.5*dpr;
   octx.beginPath(); octx.moveTo(0, ey); octx.lineTo(Wc, ey); octx.stroke(); octx.setLineDash([]);
-  [468,473,1].forEach(i=>{ const [x,y] = P(m.L[i]); octx.fillStyle = "#F2B33D"; octx.beginPath(); octx.arc(x,y,4*dpr,0,7); octx.fill(); });
+  [468,473,1].forEach(i=>{ const [x,y] = P(m.L[i]); octx.fillStyle = "#5FE0C6"; octx.beginPath(); octx.arc(x,y,4*dpr,0,7); octx.fill(); });
   // axe de la tête (front → menton)
   { const [x1,y1] = P(m.L[10]), [x2,y2] = P(m.L[152]); octx.strokeStyle = "rgba(255,255,255,.8)"; octx.lineWidth = 2*dpr; octx.beginPath(); octx.moveTo(x1,y1); octx.lineTo(x2,y2); octx.stroke(); }
   if(m.P){
