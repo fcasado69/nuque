@@ -675,7 +675,7 @@ const render = {
       <div id="lrFacts">${factsHTML(r, b.sDist, sc)}</div>
       ${dc !== "good" ? `<p class="note">${b.sDist < 50 ? "Reculez un peu et grossissez le texte (⌘ +)." : "Rapprochez un peu l'écran."}</p>` : ""}
       <div class="btns">${
-        confirmFirst ? `<button class="primary" id="again">${rel.n < 2 ? "Confirmer (2e mesure, 15 s)" : "Nouvelle mesure"}</button><button id="watch">Lancer le suivi</button>`
+        confirmFirst ? `<button class="primary" id="again">Refaire la mesure</button><button id="watch">Lancer le suivi</button>`
         : r.dir ? `<button id="watch">Lancer le suivi</button><button id="guide">Plein écran</button>`
         : `<button class="primary" id="watch">Lancer le suivi</button><button class="link" id="again">Remesurer</button>`}</div>`;
     $("#watch").onclick = startWatch;
@@ -1166,7 +1166,7 @@ function reliability(){
   }
   const ds = ser.map(x=>screenAdvice(x.sTop, x.sDist, sc.h).delta);
   const spread = Math.round(Math.max(...ds) - Math.min(...ds));
-  if(ser.length === 1) return {n:1, agree:!ser[0].doubt, text: ser[0].doubt ? `Contrôle imparfait (écart ${ser[0].err}°). Une 2e mesure confirmera le conseil.` : `Mesure contrôlée par le rond central (écart ${ser[0].err}°).`};
+  if(ser.length === 1) return {n:1, agree:!ser[0].doubt, text: ser[0].doubt ? `Contrôle imparfait (écart ${ser[0].err}°). Refaites la mesure bien immobile.` : `Mesure contrôlée par le rond central (écart ${ser[0].err}°).`};
   if(spread <= AGREE_CM) return {n:ser.length, agree:true, text:`${ser.length} mesures concordantes (écart ${spread} cm).`};
   return {n:ser.length, agree:false, text:`${ser.length} mesures différentes (écart ${spread} cm). Faites-en une de plus, bien immobile.`};
 }
