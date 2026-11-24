@@ -341,6 +341,20 @@ body{padding-bottom:86px!important}
 .tabbar .dot{position:absolute;margin-left:18px;width:8px;height:8px;border-radius:50%;background:var(--good)}
 .setlinks{display:grid;gap:8px}
 .setlinks button{display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;padding:12px}
+/* Mesure : caméra plus basse, vérifications en ligne, bouton toujours visible */
+body[data-view="measure"] .grid>.stage{aspect-ratio:16/9!important;width:100%;max-width:calc(26vh * 16 / 9);margin:0 auto}
+body[data-view="measure"] #panel{gap:10px}
+body[data-view="measure"] #panel h2{font-size:1.15rem;margin:0}
+body[data-view="measure"] .tiles{gap:6px}
+body[data-view="measure"] .tile{flex-direction:row;justify-content:center;padding:6px 4px;font-size:.75rem;gap:4px}
+body[data-view="measure"] .tile svg{width:18px;height:18px}
+body[data-view="measure"] .tile .s{display:none}
+body[data-view="measure"] .tile.ko{flex-direction:column}
+body[data-view="measure"] .tile.ko .s{display:block}
+body[data-view="measure"] .preview{padding:8px 10px;font-size:.85rem}
+body[data-view="measure"] .preview .mini{display:none}
+.gobar{position:sticky;bottom:86px;z-index:5;background:var(--surface);padding:8px 0;margin:0}
+.gobar .primary{flex:1;padding:14px;font-size:1.05rem}
 .setlinks a.btn{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:600}
 .setlinks svg{width:22px;height:22px;color:var(--accent);flex:none}
 .wake{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 18%,var(--surface));border:1px solid var(--warn)}
@@ -563,7 +577,7 @@ function parseModel(s){ // Dell : P2422H → 24"
   return {h:heightOf(d, r), label:`${s.trim().toUpperCase()} (${d}")`, ext:true};
 }
 // L'écran courant = celui où se trouve la fenêtre ; on retient un choix manuel par écran détecté
-const isBuiltInCam = l => !l || /facetime|built-in|intégr|integrated|internal/i.test(l);
+const isBuiltInCam = l => !l || /facetime|macbook|built-in|intégr|integrated|internal|^hd (web)?cam(era)?$/i.test(l);
 function camKind(){ const l = S.camLabel || S.prefs.lastCam || ""; return !l ? "" : isBuiltInCam(l) ? "caméra intégrée" : "webcam " + l.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, "").slice(0, 28); }
 function currentScreen(){
   const g = guessScreen(), o = S.prefs.overrides?.[g.label], ck = camKind();
@@ -586,7 +600,7 @@ async function detectLayout(ask){
     }
   }catch(e){}
   S.screens = scr;
-  const builtIn = !S.camLabel || /facetime|built-in|intégr|integrated|internal|hd (web)?cam(era)?$/i.test(S.camLabel);
+  const builtIn = isBuiltInCam(S.camLabel);
   let cam = null, why = "";
   if(!builtIn){ cam = "top"; why = "webcam posée sur l'écran"; }
   else if(scr && scr.list.length){
@@ -601,7 +615,7 @@ async function detectLayout(ask){
 function setupOf(){
   const sc = currentScreen(), saved = S.prefs.setup?.[sc.key];
   if(saved) return saved;
-  const builtIn = !S.camLabel || /facetime|built-in|intégr|integrated/i.test(S.camLabel);
+  const builtIn = isBuiltInCam(S.camLabel);
   const cam = S.layout?.cam || (sc.ext && builtIn ? "side" : "top");
   return {cam, tilt: cam === "top" && !sc.ext ? 20 : cam === "top" ? 0 : 20, tiltSrc:"dessin"};
 }
@@ -611,7 +625,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "21 · 24 nov. 12 h 45";
+const APP_VERSION = "22 · 24 nov. 12 h 50";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -652,7 +666,7 @@ const ORDER = ["prep","measure","result","watch"];
 function go(view){
   LR = null;
   if(ORDER.includes(view)) S.step = view;
-  S.view = view;
+  S.view = view; document.body.dataset.view = view;
   document.querySelectorAll("#steps li").forEach(li=>{
     const i = ORDER.indexOf(li.dataset.s), c = ORDER.indexOf(S.step), main = ORDER.includes(view);
     li.className = main && i===c ? "on" : (i<c ? "done" : "");
@@ -770,9 +784,9 @@ const render = {
       <div class="tiles" id="checks"></div>
       <div class="preview">
         <div class="mini"><i style="top:22px"></i></div>
-        <span>Asseyez-vous bien droit. Regardez d'abord <b>la caméra</b>, puis <b>le rond</b> en haut, en bas et au centre de cet écran. 4 points, environ 20 secondes.</span>
+        <span>Assis droit : regardez <b>la caméra</b>, puis suivez <b>le rond</b>.</span>
       </div>
-      <div class="btns"><button class="primary" id="go" disabled>Lancer</button><button class="link" id="force" hidden>Lancer quand même</button></div>
+      <div class="btns gobar"><button class="primary" id="go" disabled>Lancer la mesure (20 s)</button><button class="link" id="force" hidden>Lancer quand même</button></div>
       <p class="note" id="msg"></p>`;
     panel.querySelectorAll("[data-cam]").forEach(b=>b.onclick = ()=>{ saveSetup({cam:b.dataset.cam}); render.measure(); });
     if($("#chg")) $("#chg").onclick = ()=>{ $("#camQ").hidden = false; $("#chg").closest(".pill").hidden = true; };
@@ -2268,7 +2282,9 @@ function drawGuide(Wc, Hc, m){
   octx.beginPath(); octx.moveTo(cx - Wc*.3, Hc*.9); octx.quadraticCurveTo(cx, Hc*.8, cx + Wc*.3, Hc*.9); octx.stroke();
   octx.setLineDash([]); octx.fillStyle = ok ? "rgba(76,196,126,.95)" : "rgba(255,255,255,.85)";
   octx.font = `600 ${13*dpr}px Inter, system-ui, sans-serif`; octx.textAlign = "center";
-  octx.fillText(ok ? "Bien placé" : "Placez votre tête dans l'ovale", cx, cy + rh + 22*dpr);
+  octx.save(); octx.translate(cx, 0); octx.scale(-1, 1);   // le calque est en miroir : on remet le texte à l'endroit
+  octx.fillText(ok ? "Bien placé" : "Placez votre tête dans l'ovale", 0, cy + rh + 22*dpr);
+  octx.restore();
   octx.restore();
 }
 function drawOverlay(m){
