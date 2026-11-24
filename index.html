@@ -330,6 +330,8 @@ body.nagging .wrap{filter:blur(9px) saturate(.6);transition:filter .6s}
 .mon{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 #steps{display:none!important}
 .hright .tool:not(#tSmall){display:none!important}
+body.compact .hright{width:auto!important} body.compact .tool{flex:none!important;padding:5px 10px!important}
+body.compact header{flex-wrap:nowrap!important}
 body{padding-bottom:86px!important}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
 .tabbar .in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;max-width:480px}
