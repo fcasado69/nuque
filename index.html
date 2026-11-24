@@ -563,8 +563,15 @@ function parseModel(s){ // Dell : P2422H → 24"
   return {h:heightOf(d, r), label:`${s.trim().toUpperCase()} (${d}")`, ext:true};
 }
 // L'écran courant = celui où se trouve la fenêtre ; on retient un choix manuel par écran détecté
-function currentScreen(){ const g = guessScreen(), o = S.prefs.overrides?.[g.label]; return o ? {...o, auto:false, key:g.label} : {...g, key:g.label}; }
-const curBase = () => S.bases[currentScreen().key] || null;
+const isBuiltInCam = l => !l || /facetime|built-in|intégr|integrated|internal/i.test(l);
+function camKind(){ const l = S.camLabel || S.prefs.lastCam || ""; return !l ? "" : isBuiltInCam(l) ? "caméra intégrée" : "webcam " + l.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, "").slice(0, 28); }
+function currentScreen(){
+  const g = guessScreen(), o = S.prefs.overrides?.[g.label], ck = camKind();
+  const key = ck ? `${g.label} · ${ck}` : g.label;
+  return o ? {...o, auto:false, key, base:g.label} : {...g, key, base:g.label};
+}
+// Mesure de cette installation (écran + caméra). Anciennes mesures (enregistrées avant cette version) : écran seul.
+const curBase = () => { const sc = currentScreen(); return S.bases[sc.key] || (S.bases[sc.base]?.camKind == null && !S.prefs.keyedByCam ? S.bases[sc.base] : null) || null; };
 /* Installation devinée automatiquement : où sont les écrans, et où est la caméra.
    - Caméra externe (webcam USB) : elle est sur l'écran → "top".
    - Caméra intégrée du portable, fenêtre sur l'écran du portable → "top".
@@ -604,7 +611,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "20 · 24 nov. 12 h 30";
+const APP_VERSION = "21 · 24 nov. 12 h 45";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -732,7 +739,8 @@ const render = {
         <div class="tile">${ico("i-glasses")}Vos lunettes</div>
         <div class="tile">${ico("i-light")}Lumière devant</div>
       </div>
-      <div class="pill">${ico("i-screen")}<span class="grow"><b>${sc.label}</b> <span class="muted">${sc.auto ? "détecté" : ""}${b ? " · mesure enregistrée" : ""}</span></span><button class="link" id="chg">Changer</button></div>
+      ${!b && Object.keys(S.bases).length ? `<div class="pill warn">${ico("i-alert")}<span class="grow"><b>Nouvelle installation détectée</b> : ${sc.label}${camKind() ? " avec " + camKind() : ""}. Une mesure de 20 s, et l'app retiendra les deux installations.</span></div>` : ""}
+      <div class="pill">${ico("i-screen")}<span class="grow"><b>${sc.label}</b>${camKind() ? " · " + camKind() : ""} <span class="muted">${sc.auto ? "détecté" : ""}${b ? " · mesure enregistrée" : ""}</span></span><button class="link" id="chg">Changer</button></div>
       <div id="chooser" hidden></div>
       <label class="check"><input type="checkbox" id="prog" ${S.prefs.progressive?"checked":""}>Verres progressifs</label>
       <div class="btns">${b ? `<button class="primary" id="resume">Reprendre le suivi</button><button id="start">Nouvelle mesure</button>` : `<button class="primary" id="start">Démarrer</button>`}</div>
@@ -867,13 +875,29 @@ function openChooser(){
 }
 
 /* ================= Caméra, moteur, horloge ================= */
+// Ouvre la caméra : le choix manuel s'il existe, sinon la webcam externe si elle est branchée (posée sur l'écran que vous regardez)
+async function openStream(){
+  const want = id => ({video:{width:{ideal:1280}, height:{ideal:720}, ...(id ? {deviceId:{exact:id}} : {facingMode:"user"})}, audio:false});
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia(want(S.prefs.camId)); }catch(e){ stream = await navigator.mediaDevices.getUserMedia(want(null)); }
+  if(!S.prefs.camId){
+    try{
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind === "videoinput");
+      const ext = cams.find(d=>d.label && !isBuiltInCam(d.label) && !/virtual|obs|snap|teams|zoom/i.test(d.label));
+      if(ext && isBuiltInCam(stream.getVideoTracks()[0].label)){ stream.getTracks().forEach(t=>t.stop()); stream = await navigator.mediaDevices.getUserMedia(want(ext.deviceId)); }
+    }catch(e){}
+  }
+  try{ video.srcObject?.getTracks().forEach(t=>t.stop()); }catch(e){}
+  video.srcObject = stream; await video.play();
+  const tr = stream.getVideoTracks()[0]; S.camLabel = tr.label || ""; boostExposure(tr);
+  S.prefs.lastCam = S.camLabel; savePrefs();
+  S.layoutTried = false;
+}
 async function startCamera(){
   if(S.running) return true;
   const btn = $("#start"); if(btn){ btn.disabled = true; btn.textContent = "Chargement…"; }
   try{
-    const stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280}, height:{ideal:720}, facingMode:"user"}, audio:false});
-    video.srcObject = stream; await video.play();
-    const tr = stream.getVideoTracks()[0]; S.camLabel = tr.label || ""; boostExposure(tr);
+    await openStream();
   }catch(e){
     panel.insertAdjacentHTML("beforeend", `<p class="note" style="color:var(--bad)">Caméra bloquée : autorisez-la dans Chrome (icône dans la barre d'adresse) et dans Réglages Système › Confidentialité › Caméra.</p>`);
     if(btn){ btn.disabled = false; btn.textContent = "Réessayer"; }
@@ -1289,7 +1313,8 @@ function addToSeries(key, one){
   ser.push({sTop:one.sTop, sDist:one.sDist, err:one.err, doubt:one.doubt, at:Date.now()});
   S.series[key] = ser.slice(-5); store.set("nd5_series", S.series);
   const s = S.series[key];
-  S.bases[key] = {...one, sTop:median(s.map(x=>x.sTop)), sDist:median(s.map(x=>x.sDist)), n:s.length};
+  S.prefs.keyedByCam = true; savePrefs();
+  S.bases[key] = {camKind:camKind(), ...one, sTop:median(s.map(x=>x.sTop)), sDist:median(s.map(x=>x.sDist)), n:s.length};
   store.set("nd5_bases", S.bases);
 }
 function reliability(){
@@ -1371,7 +1396,7 @@ function gaugeSVG(top, D, h, r){
 
 /* ================= Suivi ================= */
 function startWatch(){
-  const b = curBase(); if(!b) return go("measure");
+  const b = curBase(); if(!b) return go("prep");
   S.flip = 1;
   S.ema = {dist:b.dist, flex:0, neck:b.neck, tilt:b.tilt, shY:b.shY, eaY:b.eaY, ev:b.ev0 ?? null, roll:b.roll0 ?? 0, yaw:b.yaw0 ?? 0, ratio:b.ratio0 ?? null, lean:b.lean0 ?? null, twist:b.twist0 ?? null, squint:0, hand:0};
   S.watch = {start:Date.now(), blinks:[], eyeClosed:false, present:0, good:0, issueSince:0, lastAlert:0, lastTickAt:Date.now(), sinceBreak:0, breakDue:false, absentSince:0, absentCounted:false};
@@ -2054,7 +2079,9 @@ function renderSettings(){
       ${curBase() ? `<button id="sResult">${ico("i-chart")} Voir mon dernier résultat</button>` : ""}
       <button id="sDesk">${ico("i-desk")} Check-list de mon poste</button>
       <button id="sPip">${ico("i-pip")} Pastille flottante</button>
-    </div></section>
+    </div>
+      <div class="srow" style="margin-top:8px"><label for="camSel">Caméra</label><select id="camSel"><option value="">Automatique (webcam externe si branchée)</option></select></div>
+    </section>
     ${NATIVE ? `<section class="set"><h3>Application</h3>
       <label class="check"><input type="checkbox" id="login">Lancer Nuque Droite au démarrage de l'ordinateur</label>
       <p class="note">Fermer la fenêtre ne quitte pas l'app : elle continue de veiller depuis l'icône ${NATIVE.platform === "darwin" ? "de la barre des menus, en haut de l'écran" : "près de l'horloge, en bas à droite"}.</p></section>`
@@ -2097,6 +2124,17 @@ function renderSettings(){
   if($("#sResult")) $("#sResult").onclick = ()=>go("result");
   $("#sDesk").onclick = ()=>go("desk");
   $("#sPip").onclick = ()=>openPip();
+  navigator.mediaDevices?.enumerateDevices().then(ds=>{
+    const sel = $("#camSel"); if(!sel) return;
+    ds.filter(d=>d.kind === "videoinput" && d.label).forEach(d=>sel.insertAdjacentHTML("beforeend", `<option value="${d.deviceId}" ${S.prefs.camId === d.deviceId ? "selected" : ""}>${d.label.replace(/</g,"")}</option>`));
+    sel.onchange = async e=>{
+      S.prefs.camId = e.target.value || null; savePrefs();
+      toast("Changement de caméra…", 2000);
+      try{ await openStream(); }catch(_){ toast("Caméra indisponible", 3000); return; }
+      // autre caméra = autre installation : sa propre mesure
+      if(!curBase()){ S.watching = false; go("prep"); } else if(S.watching) startWatch(); else renderSettings();
+    };
+  }).catch(()=>{});
   if(NATIVE && $("#login")){ NATIVE.getLogin().then(v=>{ $("#login").checked = !!v; }).catch(()=>{}); $("#login").onchange = e=>NATIVE.setLogin(e.target.checked); }
   panel.insertAdjacentHTML("beforeend", `<p class="note">Version ${APP_VERSION}</p>`);
   panel.querySelectorAll(".segb").forEach(b=>b.onclick = ()=>{ P[b.dataset.k] = b.dataset.v; savePrefs(); applyTheme(); renderSettings(); });
