@@ -171,7 +171,7 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((wc, perm, cb, details) => {
     const url = details.requestingUrl || wc.getURL();
     const ours = url.startsWith(REMOTE) || url.startsWith("file:");
-    cb(ours && ["media", "notifications", "clipboard-sanitized-write", "fullscreen"].includes(perm));
+    cb(ours && ["media", "notifications", "clipboard-sanitized-write", "fullscreen", "window-management"].includes(perm));
   });
   session.defaultSession.setPermissionCheckHandler((wc, perm, origin) => {
     return (origin || "").startsWith("https://fcasado69.github.io") || (origin || "").startsWith("file:");
