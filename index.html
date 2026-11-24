@@ -296,6 +296,32 @@ body.compact .qa button{padding:7px 4px;font-size:.72rem} body.compact .qa svg{w
 .pv-time{font-family:var(--f-mono);font-size:3.6rem;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
 body.compact .pv-time{font-size:2.6rem}
 body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
+/* Exercices guidés */
+.qa{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.exo-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.exo-dots{display:flex;gap:6px}.exo-dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}.exo-dots i.d{background:var(--good)}.exo-dots i.c{background:var(--accent)}
+.exo-count{font-family:var(--f-mono);font-size:3rem;font-weight:600;text-align:center;line-height:1}
+.exo-count small{font-size:1.2rem;color:var(--muted)}
+.exo-gauge{position:relative;height:22px;border-radius:11px;background:var(--sunk);overflow:hidden}
+.exo-gauge i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);transition:width .12s}
+.exo-gauge.hit i{background:var(--good)}
+.exo-gauge .goal{position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--ink);opacity:.5}
+.exo-msg{text-align:center;font-weight:700;font-size:1.05rem;min-height:1.4em}
+/* Poids sur la nuque */
+.fact .t small{display:block;font-size:.7rem;opacity:.8}
+/* Bilan */
+.report{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;background:var(--sunk);border-left:5px solid var(--accent)}
+.report h3{margin:0}
+.rline{display:flex;gap:10px;align-items:flex-start;font-size:.95rem}
+.rline svg{width:20px;height:20px;flex:none;color:var(--accent);margin-top:2px}
+.up{color:var(--good);font-weight:700}.down{color:var(--bad);font-weight:700}
+.issbar{display:grid;grid-template-columns:9.5rem 1fr 2.6rem;gap:8px;align-items:center;font-size:.85rem}
+.issbar .b{height:10px;border-radius:5px;background:var(--line);overflow:hidden}.issbar .b i{display:block;height:100%;background:var(--warn)}
+/* Alerte qui insiste */
+.nag{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;padding:20px;pointer-events:none}
+.nag div{max-width:420px;text-align:center;background:var(--bad);color:#fff;padding:20px 22px;border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.4);font-weight:700;font-size:1.15rem;line-height:1.3}
+.nag small{display:block;font-weight:500;font-size:.9rem;margin-top:6px;opacity:.9}
+body.nagging .wrap{filter:blur(9px) saturate(.6);transition:filter .6s}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -326,6 +352,7 @@ body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
     <symbol id="i-bell" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 33V21a11 11 0 0 1 22 0v12l3 4H10z"/><path d="M20 41a4 4 0 0 0 8 0"/></symbol>
     <symbol id="i-pip" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="38" height="28" rx="3"/><circle cx="34" cy="29" r="4" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-star" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M24 5l5.6 12.3 13.4 1.4-10 9 2.9 13.2L24 34.2 12.1 40.9 15 27.7l-10-9 13.4-1.4z"/></symbol>
+    <symbol id="i-stretch" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="9" r="5"/><path d="M8 6l9 12h14l9-12M24 18v12M24 30l-8 13M24 30l8 13"/></symbol>
     <symbol id="i-gear" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="6"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M9.9 9.9l4.2 4.2M33.9 33.9l4.2 4.2M9.9 38.1l4.2-4.2M33.9 14.1l4.2-4.2"/></symbol>
     <symbol id="i-sound" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 18h8l10-8v28l-10-8H8z"/><path d="M32 18c2 3 2 9 0 12M37 13c5 6 5 16 0 22"/></symbol>
     <symbol id="i-play" viewBox="0 0 48 48"><path d="M16 10l24 14-24 14z" fill="currentColor"/></symbol>
@@ -355,6 +382,7 @@ body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
 </svg>
 
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="nag" id="nagBox" hidden role="alert"><div><span id="nagT">Redressez-vous</span><small id="nagS">L'app se débloque dès que votre posture est bonne.</small></div></div>
 <div class="wrap">
   <header>
     <h1>Nuque <span>Droite</span></h1>
@@ -375,7 +403,7 @@ body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
   <div class="pomo" id="pomo" hidden>
     <div class="p-main"><span class="p-ph" id="pPh">Concentration</span><span class="p-time" id="pTime">25:00</span><span class="p-dots" id="pDots"></span></div>
     <div class="p-tip" id="pTip" hidden></div>
-    <div class="p-btns"><button class="primary" id="pGo">Démarrer</button><button id="pSkip">Passer</button><button class="link" id="pStop">Arrêter</button></div>
+    <div class="p-btns"><button class="primary" id="pEx" hidden>Exercices guidés</button><button id="pGo">Démarrer</button><button id="pSkip">Passer</button><button class="link" id="pStop">Arrêter</button></div>
   </div>
   <div class="grid">
     <div class="stage">
@@ -519,7 +547,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "17 · 23 nov. 17 h 50";
+const APP_VERSION = "18 · 24 nov. 8 h";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -702,13 +730,13 @@ const render = {
       <div id="breakBox"></div>
       <div class="hero" id="live"><div class="disc"><svg><use id="liveIco" href="#i-check"/></svg></div><div><div class="big" id="lv">—</div><div class="muted" id="lp"></div></div></div>
       <div class="facts">
-        <div class="fact" id="f-flex"><span class="n">—</span><span class="t">tête penchée</span></div>
+        <div class="fact" id="f-flex" title="Estimation selon l'inclinaison de la tête (modèle de Hansraj, 2014) : tête droite ≈ 5 kg, penchée à 15° ≈ 12 kg, à 30° ≈ 18 kg."><span class="n">—</span><span class="t">sur la nuque<small id="f-flexA"></small></span></div>
         <div class="fact" id="f-dist"><span class="n">—</span><span class="t">distance</span></div>
         <div class="fact" id="f-pct"><span class="n">—</span><span class="t">bonne posture<br>objectif ${S.prefs.goal ?? 70} %</span></div>
       </div>
       <div class="bar"><i id="pbar"></i></div>
       <div class="cheer" id="cheer"></div>
-      <div class="qa"><button id="pip">${ico("i-pip")}Pastille flottante</button><button id="qPomo">${ico("i-timer")}Pomodoro</button><button id="goSet">${ico("i-sound")}Son, voix, réglages</button></div>
+      <div class="qa"><button id="qExo">${ico("i-stretch")}Exercices nuque</button><button id="pip">${ico("i-pip")}Pastille flottante</button><button id="qPomo">${ico("i-timer")}Pomodoro</button><button id="goSet">${ico("i-sound")}Son, voix, réglages</button></div>
       <details open><summary>Tout ce que je mesure (14 points)</summary><div class="mon" id="mon"></div><p class="note" style="margin-top:8px">Comparé à votre position assis droit pendant la mesure. Vert : bien · orange : à surveiller · rouge : à corriger.</p></details>
       ${r ? `<div class="pill ${r.dir ? "warn" : "good"}">${ico(r.dir>0?"i-up":r.dir<0?"i-down":"i-check")}<span class="grow" id="scrTxt">Écran : <b>${r.dir ? r.title : "bien placé"}</b> <span class="muted">(dernière mesure)</span></span><button class="link" id="recal">Remesurer</button></div>` : ""}
       ${b && b.ev0 == null ? `<div class="pill warn">${ico("i-alert")}<span class="grow">Refaites une mesure pour activer les nouvelles détections (tête sur le côté, enfoncé dans le siège).</span><button class="link" id="recal2">Mesurer</button></div>` : ""}
@@ -721,12 +749,14 @@ const render = {
     $("#notif").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif").textContent = "Indisponible"; } };
     $("#pip").onclick = openPip;
     $("#qPomo").onclick = ()=>go("pomo");
+    $("#qExo").onclick = startExo;
     renderCheer();
     $("#stopW").onclick = ()=>{ S.watching = false; $("#watchDot").hidden = true; saveHist(); go("prep"); };
     if(S.watch?.breakDue) showBreak();
   },
   pomo(){ renderPomoView(); },
   history(){ renderHistory(); },
+  exo(){ renderExo(); },
   desk(){ renderDesk(); },
   settings(){ renderSettings(); },
   ruler(){ renderRuler(); }
@@ -914,6 +944,7 @@ function checks(m){
 function onMeasure(m){
   if(cal.active){ if(m) cal.samples.push(m); return; }
   if(G){ guideTick(m); return; }
+  if(X){ exTick(m); return; }
   if(LR && S.view === "result"){ liveResultTick(m); return; }
   if(S.watching) watchTick(m);
   if(S.view === "measure"){
@@ -1369,7 +1400,7 @@ function watchTick(m){
     if(!W.absentSince) W.absentSince = now;
     // une absence de 3 minutes compte comme une pause
     if(now - W.absentSince > 180e3 && !W.absentCounted){ W.absentCounted = true; W.sinceBreak = 0; W.breakDue = false; hist().b++; const bx = $("#breakBox"); if(bx) bx.innerHTML = ""; }
-    W.issueSince = 0; setBadge("", "Absent");
+    W.issueSince = 0; nagTick(true, [], now); setBadge("", "Absent");
     if(live){ live.className = "hero"; $("#liveIco").setAttribute("href", "#i-face"); $("#lv").textContent = "En pause"; $("#lp").textContent = W.absentCounted ? "Pause comptée. Bon retour !" : "Personne devant l'écran."; }
     return;
   }
@@ -1386,6 +1417,7 @@ function watchTick(m){
   const scrI = screenIssue(); if(scrI) is.push(scrI);
   const ok = !is.length; if(ok) W.good += dt;
   recordHist(dt, ok);
+  { const h = hist(); h.kg = (h.kg || 0) + neckKg(S.ema.flex)*dt; h.kgT = (h.kgT || 0) + dt; if(!ok){ const k = is[0].k; (h.iss || (h.iss = {}))[k] = (h.iss[k] || 0) + dt; } }
   cheerTick(ok, is, now, dt);
   const cls = ok ? "good" : (is.length > 1 ? "bad" : "warn");
   setBadge(cls, ok ? "Bonne posture" : is[0].t);
@@ -1394,7 +1426,7 @@ function watchTick(m){
     $("#liveIco").setAttribute("href", "#" + (ok ? "i-check" : is[0].i));
     $("#lv").textContent = ok ? "Bonne posture" : is[0].t;
     $("#lp").textContent = (ok ? (now < (W.praiseUntil || 0) ? W.praiseTxt : streakTxt()) : is[0].s) + (is.length > 1 ? ` Aussi : ${is.slice(1).map(x=>x.t.toLowerCase()).join(", ")}.` : "") + (eyes.length ? ` Yeux : ${eyes[0].t.toLowerCase()}.` : "");
-    const hd = Math.max(S.ema.flex, Math.abs((S.ema.roll ?? 0) - (b.roll0 ?? 0))*1.5); setFact("#f-flex", Math.max(0, Math.round(Math.max(S.ema.flex, Math.abs((S.ema.roll ?? 0) - (b.roll0 ?? 0))))) + "°", hd > 12 ? "bad" : hd > 7 ? "warn" : "good");
+    { const kg = neckKg(S.ema.flex); setFact("#f-flex", "≈ " + Math.round(kg) + " kg", kg > 14 ? "bad" : kg > 9 ? "warn" : "good"); const fa = $("#f-flexA"); if(fa) fa.textContent = `tête penchée ${Math.max(0, Math.round(S.ema.flex))}°`; }
     const sD = b.sDist * S.ema.dist / b.dist; setFact("#f-dist", Math.round(sD) + " cm", distClass(sD));
     const h = hist(), pct = h.p > 5 ? Math.round(100*h.g/h.p) : null;
     setFact("#f-pct", pct==null ? "—" : pct + " %", pct==null ? "" : pct >= 75 ? "good" : pct >= 50 ? "warn" : "bad");
@@ -1405,6 +1437,7 @@ function watchTick(m){
     if(!W.issueSince) W.issueSince = now;
     if(now - W.issueSince > S.prefs.delay*1000 && now - W.lastAlert > 120000 && P0().phase !== "break"){ W.lastAlert = now; hist().a++; alertUser(is[0]); }
   } else { W.issueSince = 0; document.title = "Nuque Droite"; }
+  nagTick(ok, is, now);
   // yeux : rappel doux, au plus toutes les 10 minutes
   if(eyes.length && now - (W.lastEye || 0) > 600000 && now - W.start > 120000){ W.lastEye = now; notify(eyes[0].t, eyes[0].s); }
   if(W.sinceBreak > 30*60 && !W.breakDue && P0().phase === "idle"){ W.breakDue = true; playSound(S.prefs.sound, {t:"Pause", a:"Deux minutes de mouvement"}); notify("Pause active", "2 minutes de mouvement."); showBreak(); }
@@ -1420,9 +1453,145 @@ function showBreak(){
       <div class="tile">${ico("i-shoulders")}Rouler les épaules<span class="s">× 10</span></div>
       <div class="tile">${ico("i-horizon")}Regarder au loin<span class="s">20 s</span></div>
     </div>
-    <div class="btns"><button class="primary" id="bdone">C'est fait</button></div>
+    <div class="btns"><button class="primary" id="bexo">${ico("i-stretch")} Exercices guidés (2 min)</button><button id="bdone">C'est fait</button></div>
     <p class="note">Ou levez-vous 3 minutes : l'app compte l'absence comme une pause.</p></div>`;
+  $("#bexo").onclick = ()=>{ box.innerHTML = ""; startExo(); };
   $("#bdone").onclick = ()=>{ box.innerHTML = ""; S.watch.sinceBreak = 0; S.watch.breakDue = false; hist().b++; saveHist(); };
+}
+
+/* ================= Poids sur la nuque ================= */
+// Charge estimée sur les cervicales selon l'inclinaison de la tête vers l'avant (modèle de Hansraj, 2014).
+// C'est une estimation : elle sert à rendre l'effet de la posture concret, pas à poser un diagnostic.
+const NECK_KG = [[0,5],[15,12],[30,18],[45,22],[60,27]];
+function neckKg(a){
+  a = Math.max(0, Math.min(60, a || 0));
+  for(let i=1;i<NECK_KG.length;i++){ const [a1,k1] = NECK_KG[i-1], [a2,k2] = NECK_KG[i]; if(a <= a2) return k1 + (k2-k1)*(a-a1)/(a2-a1); }
+  return 27;
+}
+
+/* ================= Alerte qui insiste ================= */
+function nagTick(ok, is, now){
+  const W = S.watch; if(!W) return;
+  let st = 0;
+  if(!ok && S.prefs.insist !== false && P0().phase !== "break" && W.issueSince){
+    const d = (now - W.issueSince)/1000 - S.prefs.delay;
+    st = d > 60 ? 3 : d > 30 ? 2 : 0;
+  }
+  const prev = W.nag || 0;
+  if(st === 3){ $("#nagT").textContent = is[0].t; $("#nagS").textContent = `${is[0].a}. L'app se débloque dès que votre posture est bonne.`; }
+  if(st === prev) return;
+  W.nag = st;
+  document.body.classList.toggle("nagging", st === 3); $("#nagBox").hidden = st !== 3;
+  if(pipDoc) pipDoc.body.classList.toggle("insist", st >= 2);
+  if(st === 3 && S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say(`${is[0].t}. ${is[0].a}.`, true); else playSound(S.prefs.sound, is[0]); }
+  if(st === 0 && prev === 3) toast("Merci, c'est débloqué !", 2500);
+}
+
+/* ================= Exercices guidés, vérifiés par la caméra ================= */
+const EXOS = [
+  {k:"tuck",  i:"i-chin",      t:"Rentrer le menton", how:"Reculez la tête comme pour faire un double menton, le regard droit devant. Tenez 3 secondes, puis relâchez.", reps:6, hold:3, goal:1.5, back:.6, say:"Rentrez le menton, et tenez trois secondes.", sig:(m,n)=>m.dist - n.dist},
+  {k:"turn",  i:"i-rotate",    t:"Tourner la tête", how:"Tournez lentement la tête d'un côté, revenez au centre, puis de l'autre côté.", reps:6, hold:1, goal:28, back:8, alt:true, say:"Tournez lentement la tête d'un côté, puis de l'autre.", sig:(m,n)=>m.yaw - n.yaw},
+  {k:"tilt",  i:"i-roll",      t:"Oreille vers l'épaule", how:"Penchez l'oreille vers l'épaule, épaules basses. Tenez 2 secondes, puis l'autre côté.", reps:6, hold:2, goal:15, back:5, alt:true, say:"Penchez l'oreille vers l'épaule, et tenez deux secondes. Puis l'autre côté.", sig:(m,n)=>m.roll - n.roll},
+  {k:"shrug", i:"i-shrug",     t:"Hausser les épaules", how:"Montez les épaules vers les oreilles, puis laissez-les tomber d'un coup.", reps:8, hold:0, goal:.16, back:.06, pose:true, say:"Montez les épaules vers les oreilles, puis relâchez d'un coup.", sig:(m,n)=>n.neck && S.lastPose?.neck != null ? 1 - S.lastPose.neck/n.neck : 0},
+  {k:"far",   i:"i-horizon",   t:"Regarder au loin", how:"Regardez au fond de la pièce ou par la fenêtre, en clignant plusieurs fois des yeux.", secs:20, say:"Pour finir, regardez au loin pendant vingt secondes."}
+];
+let X = null;
+const NUM = ["zéro","un","deux","trois","quatre","cinq","six","sept","huit","neuf","dix"];
+const exSay = t => { if(S.prefs.sound !== "aucun") say(t, true); };
+async function startExo(){
+  unlockAudio();
+  if(!(await startCamera())) return;
+  X = {i:0, total:0, from:S.view === "exo" ? S.step : S.view};
+  exBegin(0);
+  go("exo");
+}
+function exBegin(i){
+  X.i = i; const e = EXOS[i];
+  Object.assign(X, {phase: e.secs ? "timed" : "calib", reps:0, side:0, v:0, samples:[], n:null, start:Date.now(), lastProg:Date.now(), holdSince:0, msg:"Position de départ : tête droite, épaules relâchées."});
+  exSay(e.say);
+  if(S.view === "exo") renderExo();
+}
+function exNext(){
+  if(X.i + 1 < EXOS.length) return exBegin(X.i + 1);
+  // routine terminée
+  const n = X.total; X.phase = "done";
+  const h = hist(); h.ex = (h.ex || 0) + n; h.b++; saveHist();
+  if(S.watch){ S.watch.sinceBreak = 0; S.watch.breakDue = false; }
+  celebrate(n ? `Bravo, routine terminée : ${n} mouvements ! Votre nuque vous remercie.` : "Routine terminée. Bravo !");
+  renderExo();
+}
+function exStop(){ const back = X?.from; X = null; if(S.watching) go("watch"); else go(back && back !== "exo" ? back : S.step); }
+function exTick(m){
+  if(!X || X.phase === "done" || X.phase === "timed") return;
+  const e = EXOS[X.i], now = Date.now();
+  if(!m){ exMsg("Je ne vois plus votre visage : restez face à la caméra."); return; }
+  if(e.pose && !S.lastPose?.P){ exMsg("Reculez un peu : la caméra doit voir vos épaules."); X.lastProg = now; return; }
+  if(X.phase === "calib"){
+    X.samples.push({dist:m.dist, yaw:m.yaw, roll:m.roll, neck:S.lastPose?.neck});
+    if(now - X.start > 1500 && X.samples.length >= 8){
+      const med = k => median(X.samples.map(s=>s[k]).filter(v=>v != null));
+      X.n = {dist:med("dist"), yaw:med("yaw"), roll:med("roll"), neck:med("neck")};
+      X.phase = "go"; X.lastProg = now; exMsg(e.alt ? "Allez-y, d'un côté." : "Allez-y.");
+    }
+    return;
+  }
+  X.v += .35*(e.sig(m, X.n) - X.v);
+  const val = e.alt ? (X.side ? X.v*X.side : Math.abs(X.v)) : X.v;
+  const prog = Math.max(0, Math.min(1, val/e.goal));
+  const g = $("#xG"); if(g){ g.style.width = Math.round(prog*100) + "%"; g.parentElement.classList.toggle("hit", prog >= 1); }
+  if(X.phase === "go"){
+    if(val >= e.goal){
+      if(e.alt && !X.side) X.side = Math.sign(X.v) || 1;
+      X.phase = "hold"; X.holdSince = now;
+      if(e.hold > 1) exMsg("Tenez…");
+    }
+  } else if(X.phase === "hold"){
+    if(val < e.goal*.7){ X.phase = "go"; exMsg("Encore un peu plus loin, et tenez."); }
+    else if(now - X.holdSince >= e.hold*1000){ X.phase = "back"; beep(880,.08,true); exMsg(e.k === "shrug" ? "Relâchez !" : "Revenez au centre."); }
+    else if(e.hold > 1) exMsg(`Tenez… ${Math.ceil(e.hold - (now - X.holdSince)/1000)}`);
+  } else if(X.phase === "back"){
+    if(Math.abs(X.v) < e.back){
+      X.reps++; X.total++; X.lastProg = now;
+      const c = $("#xN"); if(c) c.textContent = X.reps;
+      if(X.reps >= e.reps){ exSay(X.i + 1 < EXOS.length ? "Bien. Exercice suivant." : ""); return exNext(); }
+      if(e.alt) X.side = -X.side;
+      X.phase = "go";
+      exSay(NUM[X.reps] || String(X.reps));
+      exMsg(e.alt ? "Maintenant l'autre côté." : "Encore.");
+    }
+  }
+  if(now - X.lastProg > 20000){ X.lastProg = now; exMsg("Je ne vois pas bien le mouvement : faites-le plus amplement, face à la caméra. Ou touchez « Passer »."); exSay("Faites le mouvement un peu plus grand."); }
+}
+function exMsg(t){ X.msg = t; const el = $("#xMsg"); if(el) el.textContent = t; }
+setInterval(()=>{
+  if(!X || X.phase !== "timed") return;
+  const e = EXOS[X.i], left = Math.max(0, Math.ceil(e.secs - (Date.now() - X.start)/1000));
+  const c = $("#xN"); if(c) c.textContent = left;
+  const g = $("#xG"); if(g) g.style.width = Math.round(100*(1 - left/e.secs)) + "%";
+  if(left === 0) exNext();
+}, 250);
+function renderExo(){
+  if(!X){ X = {i:0, total:0, phase:"done"}; }
+  if(X.phase === "done"){
+    const h = hist();
+    panel.innerHTML = `
+      <div class="hero good"><div class="disc">${ico("i-check")}</div><div><div class="big">Routine terminée</div><div class="muted">${X.total} mouvements vérifiés par la caméra · ${h.ex || 0} aujourd'hui</div></div></div>
+      <p class="note">Faits chaque jour, ces mouvements entretiennent la mobilité de la nuque et des épaules. S'ils font mal, arrêtez et parlez-en à un médecin ou un kiné.</p>
+      <div class="btns"><button class="primary" id="xEnd">${S.watching ? "Reprendre le suivi" : "Terminer"}</button><button id="xAgain">Recommencer</button></div>`;
+    $("#xEnd").onclick = exStop; $("#xAgain").onclick = startExo;
+    return;
+  }
+  const e = EXOS[X.i];
+  panel.innerHTML = `
+    <div class="exo-top"><h2>Exercices nuque</h2><span class="exo-dots">${EXOS.map((_,j)=>`<i class="${j < X.i ? "d" : j === X.i ? "c" : ""}"></i>`).join("")}</span></div>
+    <div class="hero"><div class="disc">${ico(e.i)}</div><div><div class="big">${X.i+1}/${EXOS.length} · ${e.t}</div><div class="muted">${e.how}</div></div></div>
+    <div class="exo-count"><span id="xN">${e.secs ? e.secs : X.reps}</span> <small>${e.secs ? "secondes" : "/ " + e.reps}</small></div>
+    <div class="exo-gauge" title="Amplitude du mouvement : la barre doit atteindre le bout"><i id="xG"></i><span class="goal"></span></div>
+    <div class="exo-msg" id="xMsg">${X.msg || ""}</div>
+    <div class="btns"><button id="xSkip">Passer cet exercice</button><button class="link" id="xStop">Arrêter</button></div>
+    <p class="note">${e.secs ? "Pas besoin de regarder l'écran : l'app compte pour vous." : "La caméra vérifie chaque mouvement : la barre se remplit quand l'amplitude est suffisante, puis le compteur avance."} Bougez lentement, sans forcer.</p>`;
+  $("#xSkip").onclick = ()=>exNext();
+  $("#xStop").onclick = exStop;
 }
 
 /* ================= Encouragements ================= */
@@ -1483,7 +1652,7 @@ function pomoNext(auto){
   if(POMO.phase === "work" || POMO.phase === "idle"){
     POMO.n++; POMO.phase = "break"; POMO.tip = pick(POMO_TIPS); POMO.left = null; POMO.end = Date.now() + 1000*pDur("break");
     if(S.watch){ S.watch.sinceBreak = 0; S.watch.breakDue = false; }
-    if(auto){ const t = `Pause ! ${POMO.tip}`; toast(t, 6000); if(S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say(`Bravo, session terminée. ${t}`, true); else playSound(S.prefs.sound); } notify("Pomodoro : pause", POMO.tip); }
+    if(auto){ const t = `Pause ! Faites les exercices guidés, ou : ${POMO.tip.toLowerCase()}`; toast(t, 6000); if(S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say(`Bravo, session terminée. ${t}`, true); else playSound(S.prefs.sound); } notify("Pomodoro : pause", POMO.tip); }
   } else {
     if(auto){ hist().b++; saveHist(); }
     POMO.phase = "work"; POMO.end = null; POMO.left = pDur("work");   // on attend votre clic pour repartir
@@ -1508,8 +1677,10 @@ function renderPomo(){
   $("#pGo").textContent = running ? (brk ? "Suspendre" : "Mettre en pause") : (POMO.phase === "idle" ? "Démarrer" : brk ? "Reprendre la pause" : "Reprendre");
   $("#pSkip").textContent = brk ? "Finir la pause" : "Passer à la pause";
   $("#pSkip").hidden = POMO.phase === "idle";
+  $("#pEx").hidden = !brk; $("#pGo").className = brk ? "" : "primary";
 }
 $("#pGo").onclick = ()=> POMO.end ? pomoPause() : pomoStart();
+$("#pEx").onclick = ()=> startExo();
 $("#pSkip").onclick = ()=> pomoNext(false);
 $("#pStop").onclick = pomoStop;
 $("#tPomo").onclick = ()=> S.view === "pomo" ? go(S.step) : go("pomo");
@@ -1518,7 +1689,7 @@ function renderPomoView(update){
   if(update && $("#pvTime")){
     $("#pvTime").textContent = mmss(pomoLeft()); $("#pvPh").textContent = POMO.phase === "idle" ? "Prêt" : brk ? "Pause" : "Concentration";
     $("#pvGo").textContent = running ? (brk ? "Suspendre" : "Mettre en pause") : (POMO.phase === "idle" ? "Démarrer" : "Reprendre");
-    $("#pvSkip").hidden = POMO.phase === "idle"; $("#pvSkip").textContent = brk ? "Finir la pause" : "Passer à la pause";
+    $("#pvSkip").hidden = POMO.phase === "idle"; $("#pvEx").hidden = !brk; $("#pvGo").className = brk ? "" : "primary"; $("#pvSkip").textContent = brk ? "Finir la pause" : "Passer à la pause";
     $("#pvTip").hidden = !brk; if(brk) $("#pvTip").textContent = POMO.tip || ""; $("#pvBox").className = "pv " + (brk ? "brk" : "");
     $("#pvN").textContent = POMO.n ? `${POMO.n} session${POMO.n > 1 ? "s" : ""} terminée${POMO.n > 1 ? "s" : ""} aujourd'hui` : "Aucune session terminée pour l'instant";
     return;
@@ -1526,7 +1697,7 @@ function renderPomoView(update){
   panel.innerHTML = `
     <div class="btns" style="justify-content:space-between"><h2>Pomodoro</h2><button class="link" id="back">← Retour</button></div>
     <div class="pv" id="pvBox"><span class="pv-ph" id="pvPh"></span><span class="pv-time" id="pvTime"></span><span class="note" id="pvN"></span><div class="p-tip" id="pvTip" hidden></div></div>
-    <div class="btns"><button class="primary" id="pvGo"></button><button id="pvSkip"></button><button class="link" id="pvStop">Arrêter</button></div>
+    <div class="btns"><button class="primary" id="pvEx" hidden>Exercices guidés</button><button class="primary" id="pvGo"></button><button id="pvSkip"></button><button class="link" id="pvStop">Arrêter</button></div>
     <div class="srow"><label for="pw2">Concentration</label><select id="pw2">${[15,20,25,30,45,50].map(v=>`<option value="${v}" ${(P.pomoW??25)===v?"selected":""}>${v} min</option>`).join("")}</select></div>
     <div class="srow"><label for="pb2">Pause</label><select id="pb2">${[3,5,10].map(v=>`<option value="${v}" ${(P.pomoB??5)===v?"selected":""}>${v} min</option>`).join("")}</select></div>
     <p class="note">Concentrez-vous ${P.pomoW ?? 25} min, puis pause de ${P.pomoB ?? 5} min (pause longue toutes les 4 sessions). Le minuteur continue si vous changez d'onglet : il s'affiche en haut et dans la pastille. Pendant la pause, les alertes de posture se taisent.</p>`;
@@ -1534,6 +1705,7 @@ function renderPomoView(update){
   $("#pvGo").onclick = ()=> POMO.end ? pomoPause() : pomoStart();
   $("#pvSkip").onclick = ()=> pomoNext(false);
   $("#pvStop").onclick = pomoStop;
+  $("#pvEx").onclick = ()=> startExo();
   [["#pw2","pomoW"],["#pb2","pomoB"]].forEach(([id,k])=>$(id).onchange = e=>{ P[k] = +e.target.value; savePrefs(); if(POMO.phase !== "idle" && !POMO.end) POMO.left = null; renderPomoView(); });
   renderPomoView(true);
 }
@@ -1587,10 +1759,10 @@ function renderHistory(){
   }
   panel.innerHTML = `
     <div class="btns" style="justify-content:space-between"><h2>Historique</h2><button class="link" id="back">← Retour</button></div>
+    ${weekReport()}
     <div class="hero ${tp==null ? "" : tp >= 75 ? "good" : tp >= 50 ? "warn" : "bad"}"><div class="disc">${ico("i-chart")}</div><div><div class="big">${tp==null ? "—" : tp + " %"}</div><div class="muted">du temps en bonne posture aujourd'hui · ${today.a} alerte(s) · ${today.b} pause(s)</div></div></div>
     <div><h3>Aujourd'hui, heure par heure</h3>${hourChart(today)}</div>
     <div><h3>7 derniers jours</h3>${weekChart(days)}</div>
-    ${worst ? `<div class="insight">${ico("i-alert")}<span>Votre posture se dégrade surtout vers <b>${worst.hr} h</b> (${worst.pct} %). Prévoyez une pause à ce moment-là.</span></div>` : ""}
     ${link ? `<div class="insight">${ico("i-pain")}<span>Les jours à 70 % ou plus de bonne posture, votre nuque est notée <b>${link.g}/10</b>, contre <b>${link.b}/10</b> les autres jours.</span></div>` : `<p class="note">Après 5 jours notés, l'app vous montrera si la bonne posture réduit votre douleur.</p>`}
     <div><h3>Ma nuque aujourd'hui</h3><p class="note">0 = aucune douleur · 10 = très forte</p>
       <div class="painrow" id="pain">${Array.from({length:11},(_,i)=>`<button data-v="${i}" class="${today.pain===i?"sel":""}">${i}</button>`).join("")}</div></div>
@@ -1600,6 +1772,49 @@ function renderHistory(){
   $("#clear").onclick = ()=>{ $("#clearOk").hidden = false; };
   $("#clearNo").onclick = ()=>{ $("#clearOk").hidden = true; };
   $("#clearYes").onclick = ()=>{ S.hist = {}; saveHist(); renderHistory(); };
+}
+const ISS_NAME = {slouch:"Dos affaissé", hand:"Main sous le menton", fwdhead:"Tête en avant", round:"Épaules enroulées", roll:"Tête penchée sur le côté", flex:"Tête baissée", ext:"Menton relevé", yaw:"Tête tournée", lean:"Buste penché", twist:"Buste tourné", tilt:"Épaules de travers", shrug:"Épaules crispées", close:"Trop près de l'écran", screen:"Écran mal placé"};
+const ISS_FIX = {
+  slouch:"Souvent un siège trop profond ou un dossier mal réglé. Essayez un petit coussin dans le bas du dos, et les fesses bien au fond.",
+  hand:"Souvent un signe de fatigue. Faites une vraie pause et posez les avant-bras sur le bureau.",
+  fwdhead:"Souvent un écran trop loin ou un texte trop petit : on avance la tête pour lire. Rapprochez l'écran ou grossissez le texte (⌘ +).",
+  round:"Souvent un clavier ou une souris trop loin. Rapprochez-les : coudes près du corps, à 90°.",
+  roll:"Souvent un document posé à côté du clavier ou le téléphone calé à l'épaule. Placez les documents entre le clavier et l'écran.",
+  flex:"Souvent un écran trop bas ou un ordinateur portable utilisé seul. Montez l'écran (réglage guidé) ou ajoutez un clavier séparé.",
+  ext:"Souvent un écran trop haut, ou des verres progressifs. Baissez un peu l'écran.",
+  yaw:"Souvent un écran qui n'est pas en face de vous. Centrez l'écran principal devant le clavier.",
+  lean:"Souvent des accoudoirs à des hauteurs différentes, ou un appui sur un seul coude. Réglez les accoudoirs à la même hauteur.",
+  twist:"Souvent un écran ou une souris placés de côté. Mettez l'écran et le clavier dans l'axe.",
+  tilt:"Souvent un seul avant-bras en appui. Posez les deux avant-bras, ou réglez les accoudoirs.",
+  shrug:"Souvent un bureau ou des accoudoirs trop hauts, ou du stress. Baissez les accoudoirs, et faites l'exercice « hausser les épaules ».",
+  close:"Souvent un texte trop petit. Grossissez le texte (⌘ +) et reculez à 50–70 cm.",
+  screen:"Réglez la hauteur de l'écran avec le réglage guidé (étape 3)."
+};
+function weekReport(){
+  const sumDays = (from, to) => { const r = {p:0, g:0, kg:0, kgT:0, ex:0, b:0, iss:{}, h:{}};
+    for(let i=from;i<to;i++){ const d = new Date(); d.setDate(d.getDate()-i); const v = S.hist[dayKey(d)]; if(!v) continue;
+      r.p += v.p; r.g += v.g; r.kg += v.kg || 0; r.kgT += v.kgT || 0; r.ex += v.ex || 0; r.b += v.b || 0;
+      Object.entries(v.iss || {}).forEach(([k,t])=>r.iss[k] = (r.iss[k] || 0) + t);
+      Object.entries(v.h || {}).forEach(([hr,[p,g]])=>{ const x = r.h[hr] || (r.h[hr] = [0,0]); x[0] += p; x[1] += g; });
+    } return r; };
+  const w = sumDays(0, 7), pw = sumDays(7, 14);
+  if(w.p < 1800) return `<div class="report"><h3>Bilan de la semaine</h3><p class="note" style="margin:0">Il apparaîtra après 30 minutes de suivi cette semaine (${Math.round(w.p/60)} min pour l'instant).</p></div>`;
+  const pct = Math.round(100*w.g/w.p), ppct = pw.p >= 1800 ? Math.round(100*pw.g/pw.p) : null;
+  const delta = ppct == null ? "" : pct >= ppct ? ` <span class="up">↑ +${pct-ppct} pts</span> par rapport à la semaine d'avant` : ` <span class="down">↓ ${pct-ppct} pts</span> par rapport à la semaine d'avant`;
+  const bad = Math.max(1, w.p - w.g), top = Object.entries(w.iss).sort((a,b)=>b[1]-a[1]).filter(([,t])=>t > 30).slice(0, 3);
+  const kg = w.kgT ? w.kg/w.kgT : null, pkg = pw.kgT > 1800 ? pw.kg/pw.kgT : null;
+  const hrs = Object.entries(w.h).filter(([,x])=>x[0] > 1200).map(([hr,x])=>({hr:+hr, pct:Math.round(100*x[1]/x[0])}));
+  const worst = hrs.length > 2 ? hrs.reduce((a,b)=> b.pct < a.pct ? b : a) : null;
+  const k1 = top[0]?.[0];
+  return `<div class="report"><h3>Bilan de la semaine</h3>
+    <div class="rline">${ico("i-chart")}<span><b>${pct} %</b> du temps en bonne posture${delta}.</span></div>
+    ${k1 ? `<div class="rline">${ico("i-alert")}<span>Votre problème n° 1 : <b>${ISS_NAME[k1] || k1}</b> (${Math.round(100*top[0][1]/bad)} % du temps de mauvaise posture).</span></div>
+      ${top.map(([k,t])=>`<div class="issbar"><span>${ISS_NAME[k] || k}</span><span class="b"><i style="width:${Math.round(100*t/bad)}%"></i></span><span>${Math.round(100*t/bad)} %</span></div>`).join("")}
+      <div class="rline">${ico("i-star")}<span><b>À essayer cette semaine :</b> ${ISS_FIX[k1] || "Refaites une mesure pour vérifier votre poste."}</span></div>` : ""}
+    ${worst ? `<div class="rline">${ico("i-timer")}<span>Moment le plus difficile : vers <b>${worst.hr} h</b> (${worst.pct} % de bonne posture). Prévoyez une pause ou un Pomodoro à ce moment-là.</span></div>` : ""}
+    ${kg != null ? `<div class="rline">${ico("i-head-down")}<span>Poids moyen sur la nuque : <b>≈ ${Math.round(kg)} kg</b>${pkg != null ? ` (${kg <= pkg ? `<span class="up">${(kg-pkg).toFixed(1)} kg</span>` : `<span class="down">+${(kg-pkg).toFixed(1)} kg</span>`})` : ""}. Tête droite : ≈ 5 kg.</span></div>` : ""}
+    <div class="rline">${ico("i-stretch")}<span><b>${w.ex}</b> mouvements d'exercices vérifiés · <b>${w.b}</b> pause(s).${w.ex < 30 ? " Visez une routine par jour (2 min)." : " Bravo, continuez !"}</span></div>
+  </div>`;
 }
 function colorFor(p){ return p >= 75 ? "var(--good)" : p >= 50 ? "var(--warn)" : "var(--bad)"; }
 function hourChart(d){
@@ -1734,6 +1949,7 @@ function renderSettings(){
     </section>
     <section class="set"><h3>Alertes</h3>
       <div class="srow"><label for="delay">Prévenir après</label><select id="delay"><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option></select></div>
+      <label class="check"><input type="checkbox" id="insist" ${P.insist === false ? "" : "checked"}>Alerte qui insiste : si la mauvaise posture dure, la pastille clignote en rouge (après 30 s de plus), puis la fenêtre de l'app se floute jusqu'à ce que vous vous redressiez (après 1 min).</label>
       <div class="btns"><button id="notif2">Activer les notifications du Mac</button></div>
       <p class="note">Une mauvaise posture s'affiche tout de suite ; le son et la notification attendent ce délai. Ensuite, 2 minutes minimum entre deux alertes. Bilan à 12 h 30 et 17 h 30.</p>
     </section>
@@ -1747,6 +1963,7 @@ function renderSettings(){
   $("#vol").onchange = ()=>playSound(P.sound === "aucun" ? "carillon" : P.sound);
   const vsel = $("#voiceSel"); if(vsel) vsel.onchange = e=>{ P.voiceName = e.target.value; savePrefs(); say("Tête penchée sur le côté. Yeux à l'horizontale.", true); };
   const vt = $("#voiceTest"); if(vt) vt.onclick = ()=>say("Redressez-vous. Dos contre le dossier.", true);
+  $("#insist").onchange = e=>{ P.insist = e.target.checked; savePrefs(); };
   $("#goal").onchange = e=>{ P.goal = +e.target.value; savePrefs(); };
   $("#cheerOn").onchange = e=>{ P.cheer = e.target.checked; savePrefs(); };
   [["#pw","pomoW"],["#pb","pomoB"],["#pl","pomoL"]].forEach(([id,k])=>$(id).onchange = e=>{ P[k] = +e.target.value; savePrefs(); if(POMO.phase !== "idle" && !POMO.end){ POMO.left = null; } renderPomo(); });
@@ -1820,7 +2037,9 @@ async function openPip(){
       pipDoc.head.innerHTML = `<style>html,body{margin:0;height:100%;background:#0E1514;color:#E4EDEA;font:13px/1.25 -apple-system,system-ui,sans-serif;overflow:hidden}
         #p{display:flex;align-items:center;gap:10px;height:100%;padding:0 12px}#d{flex:none;width:14px;height:14px;border-radius:50%;background:#2FA867}
         #x{min-width:0;display:flex;flex-direction:column;gap:2px}#t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        #a{color:#9FB4AE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#a::before{content:"→ "}</style>`;
+        #a{color:#9FB4AE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#a::before{content:"→ "}
+        body.insist{animation:pz 1.2s ease-in-out infinite}body.insist #a{color:#fff}body.insist #t{font-size:14px}
+        @keyframes pz{0%,100%{background:#8E2A12}50%{background:#E2582A}}</style>`;
       pipDoc.body.innerHTML = `<div id="p"><span id="d"></span><span id="x"><span id="t">Suivi en cours</span><span id="a">Asseyez-vous bien droit</span></span></div>`;
       w.addEventListener("pagehide", ()=>{ pipDoc = null; });
       return;
@@ -1843,7 +2062,7 @@ function updatePip(cls, title, action){
   }
   if(!pipCanvas) return;
   const x = pipCanvas.getContext("2d");
-  x.fillStyle = "#0E1514"; x.fillRect(0,0,300,64);
+  x.fillStyle = (S.watch?.nag || 0) >= 2 ? (Date.now() % 1200 < 600 ? "#8E2A12" : "#C2401F") : "#0E1514"; x.fillRect(0,0,300,64);
   x.fillStyle = col; x.beginPath(); x.arc(22,32,8,0,7); x.fill();
   x.fillStyle = "#F1F6F4"; x.font = "700 15px -apple-system, system-ui, sans-serif"; x.fillText(title.slice(0,30), 40, 27);
   x.fillStyle = "#9FB4AE"; x.font = "14px -apple-system, system-ui, sans-serif"; x.fillText(("→ " + action).slice(0,34), 40, 47);
