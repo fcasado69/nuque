@@ -9,6 +9,7 @@ if (ours) {
     pillShow: on => ipcRenderer.send("pill-show", on),
     blur: (on, t, a) => ipcRenderer.send("blur", { on: !!on, t: t || "", a: a || "" }),
     show: () => ipcRenderer.send("show"),
+    screens: () => ipcRenderer.invoke("screens"),
     getLogin: () => ipcRenderer.invoke("login-get"),
     setLogin: on => ipcRenderer.invoke("login-set", on),
     onCmd: cb => ipcRenderer.on("cmd", (e, c) => cb(c))

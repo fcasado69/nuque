@@ -147,6 +147,11 @@ ipcMain.on("pill", (e, s) => {
 ipcMain.on("pill-show", (e, on) => setPillVisible(on !== false));
 ipcMain.on("blur", (e, b) => { lastBlur = b; if (b && b.on) showBlur(); else hideBlur(); });
 ipcMain.on("show", showWin);
+// Disposition des écrans, pour deviner où est la caméra (portable en dessous ou à côté de l'écran externe)
+ipcMain.handle("screens", () => {
+  const list = screen.getAllDisplays(), cur = win ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay();
+  return { list: list.map(d => ({ internal: !!d.internal, x: d.bounds.x, y: d.bounds.y, w: d.bounds.width, h: d.bounds.height })), cur: list.findIndex(d => d.id === cur.id) };
+});
 ipcMain.handle("login-get", () => app.getLoginItemSettings().openAtLogin);
 ipcMain.handle("login-set", (e, on) => { setLogin(!!on); return on; });
 ipcMain.on("pill-open", showWin);
