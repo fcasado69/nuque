@@ -565,11 +565,37 @@ function parseModel(s){ // Dell : P2422H → 24"
 // L'écran courant = celui où se trouve la fenêtre ; on retient un choix manuel par écran détecté
 function currentScreen(){ const g = guessScreen(), o = S.prefs.overrides?.[g.label]; return o ? {...o, auto:false, key:g.label} : {...g, key:g.label}; }
 const curBase = () => S.bases[currentScreen().key] || null;
+/* Installation devinée automatiquement : où sont les écrans, et où est la caméra.
+   - Caméra externe (webcam USB) : elle est sur l'écran → "top".
+   - Caméra intégrée du portable, fenêtre sur l'écran du portable → "top".
+   - Caméra intégrée, fenêtre sur un écran externe → portable "below" (en dessous) ou "side" (à côté), selon la disposition des écrans. */
+async function detectLayout(ask){
+  let scr = null;
+  try{
+    if(NATIVE?.screens) scr = await NATIVE.screens();
+    else if(window.getScreenDetails && (ask || (await navigator.permissions.query({name:"window-management"}).catch(()=>({}))).state === "granted")){
+      const d = await getScreenDetails();
+      scr = {list: d.screens.map(x=>({internal:!!x.isInternal, x:x.left, y:x.top, w:x.width, h:x.height})), cur: d.screens.indexOf(d.currentScreen)};
+    }
+  }catch(e){}
+  S.screens = scr;
+  const builtIn = !S.camLabel || /facetime|built-in|intégr|integrated|internal|hd (web)?cam(era)?$/i.test(S.camLabel);
+  let cam = null, why = "";
+  if(!builtIn){ cam = "top"; why = "webcam posée sur l'écran"; }
+  else if(scr && scr.list.length){
+    const cur = scr.list[scr.cur] || scr.list[0], lap = scr.list.find(x=>x.internal);
+    if(!lap){ cam = "top"; why = "caméra de l'écran"; }
+    else if(cur === lap || scr.list.length === 1){ cam = "top"; why = "écran du portable"; }
+    else { cam = lap.y >= cur.y + cur.h*0.6 ? "below" : "side"; why = cam === "below" ? "écran externe + portable en dessous" : "écran externe + portable à côté"; }
+  } else if(currentScreen().ext){ cam = (screen.isExtended ? "below" : "side"); why = "écran externe + caméra du portable"; }
+  S.layout = cam ? {cam, why} : null;
+  return S.layout;
+}
 function setupOf(){
   const sc = currentScreen(), saved = S.prefs.setup?.[sc.key];
   if(saved) return saved;
   const builtIn = !S.camLabel || /facetime|built-in|intégr|integrated/i.test(S.camLabel);
-  const cam = sc.ext && builtIn ? "side" : "top";
+  const cam = S.layout?.cam || (sc.ext && builtIn ? "side" : "top");
   return {cam, tilt: cam === "top" && !sc.ext ? 20 : cam === "top" ? 0 : 20, tiltSrc:"dessin"};
 }
 function saveSetup(patch){ const k = currentScreen().key; S.prefs.setup = S.prefs.setup || {}; S.prefs.setup[k] = {...setupOf(), ...patch}; savePrefs(); }
@@ -578,7 +604,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "19 · 24 nov. 12 h";
+const APP_VERSION = "20 · 24 nov. 12 h 30";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -713,7 +739,7 @@ const render = {
       <p class="note">Vous utilisez deux écrans ? Glissez cette fenêtre sur l'autre : l'app le détecte et garde une mesure pour chacun.</p>`;
     $("#prog").onchange = e=>{ S.prefs.progressive = e.target.checked; savePrefs(); };
     $("#chg").onclick = openChooser;
-    $("#start").onclick = async ()=>{ unlockAudio(); if(await startCamera()) go("measure"); };
+    $("#start").onclick = async ()=>{ unlockAudio(); if(await startCamera()){ if(screen.isExtended || NATIVE) await detectLayout(true); go("measure"); } };
     const r = $("#resume"); if(r) r.onclick = async ()=>{ unlockAudio(); if(await startCamera()) startWatch(); };
   },
   measure(){
@@ -722,16 +748,17 @@ const render = {
     const tiltOpt = d => `<button class="opt ${st.tiltSrc!=="mesure" && st.tilt===d?"sel":""}" data-tilt="${d}">${tiltSVG(d)}<span>${d===0?"Droit":d+"°"}</span></button>`;
     panel.innerHTML = `
       <h2>Votre installation</h2>
-      <div><p class="q">Où est la caméra ?</p>
+      ${!S.prefs.setup?.[sc.key] && S.layout ? `<div class="pill good">${ico("i-check")}<span class="grow">Détecté automatiquement : <b>${S.layout.why}</b>.</span><button class="link" id="chg">Changer</button></div>` : ""}
+      <div id="camQ" ${!S.prefs.setup?.[sc.key] && S.layout ? "hidden" : ""}><p class="q">Où est la caméra ?</p>
         <div class="opts">
           ${camOpt("top", "En haut de cet écran", `<svg viewBox="0 0 80 50"><rect x="14" y="8" width="52" height="32" rx="2"/><circle cx="40" cy="5" r="3" class="cam"/></svg>`)}
-          ${camOpt("side", "MacBook à côté", `<svg viewBox="0 0 80 50"><rect x="4" y="6" width="46" height="30" rx="2"/><rect x="56" y="22" width="22" height="15" rx="1"/><path d="M53 40h28"/><circle cx="67" cy="19.5" r="2.5" class="cam"/></svg>`)}
-          ${camOpt("below", "MacBook devant, en dessous", `<svg viewBox="0 0 80 50"><rect x="14" y="2" width="52" height="28" rx="2"/><rect x="27" y="32" width="26" height="12" rx="1"/><path d="M23 47h34"/><circle cx="40" cy="30" r="2.5" class="cam"/></svg>`)}
+          ${camOpt("side", "Portable à côté", `<svg viewBox="0 0 80 50"><rect x="4" y="6" width="46" height="30" rx="2"/><rect x="56" y="22" width="22" height="15" rx="1"/><path d="M53 40h28"/><circle cx="67" cy="19.5" r="2.5" class="cam"/></svg>`)}
+          ${camOpt("below", "Portable devant, en dessous", `<svg viewBox="0 0 80 50"><rect x="14" y="2" width="52" height="28" rx="2"/><rect x="27" y="32" width="26" height="12" rx="1"/><path d="M23 47h34"/><circle cx="40" cy="30" r="2.5" class="cam"/></svg>`)}
         </div></div>
-      <div><p class="q">Inclinaison de l'écran ${st.cam === "top" ? "" : "du MacBook"} (vu de profil)</p>
-        <div class="opts">${[0,10,20,30].map(tiltOpt).join("")}</div>
+      <details ${st.tiltSrc === "mesure" ? "open" : ""}><summary>Plus précis : inclinaison de l'écran ${st.cam === "top" ? "" : "du portable"}</summary>
+        <div class="opts" style="margin-top:8px">${[0,10,20,30].map(tiltOpt).join("")}</div>
         <div class="row" style="margin-top:8px"><label for="tiltIn" class="note">Angle mesuré avec une appli niveau (plus précis) :</label><input id="tiltIn" type="number" min="-10" max="45" step="1" style="flex:0 0 80px" value="${st.tiltSrc==="mesure" ? st.tilt : ""}" placeholder="ex. 17"><span class="note">°</span></div>
-      </div>
+      </details>
       <div class="tiles" id="checks"></div>
       <div class="preview">
         <div class="mini"><i style="top:22px"></i></div>
@@ -740,6 +767,8 @@ const render = {
       <div class="btns"><button class="primary" id="go" disabled>Lancer</button><button class="link" id="force" hidden>Lancer quand même</button></div>
       <p class="note" id="msg"></p>`;
     panel.querySelectorAll("[data-cam]").forEach(b=>b.onclick = ()=>{ saveSetup({cam:b.dataset.cam}); render.measure(); });
+    if($("#chg")) $("#chg").onclick = ()=>{ $("#camQ").hidden = false; $("#chg").closest(".pill").hidden = true; };
+    if(!S.layoutTried){ S.layoutTried = true; detectLayout(false).then(l=>{ if(l && S.view === "measure" && !S.prefs.setup?.[sc.key]) render.measure(); }); }
     panel.querySelectorAll("[data-tilt]").forEach(b=>b.onclick = ()=>{ saveSetup({tilt:+b.dataset.tilt, tiltSrc:"dessin"}); render.measure(); });
     $("#tiltIn").onchange = e=>{ const v = parseFloat(e.target.value); if(v >= -10 && v <= 45) saveSetup({tilt:v, tiltSrc:"mesure"}); else if(e.target.value === "") saveSetup({tiltSrc:"dessin", tilt:Math.round(st.tilt/10)*10}); render.measure(); };
     $("#go").onclick = runCalibration; $("#force").onclick = runCalibration;
@@ -748,8 +777,8 @@ const render = {
   result(){
     const b = curBase(); if(!b) return go("measure");
     const sc = currentScreen(), r = screenAdvice(b.sTop, b.sDist, sc.h), dc = distClass(b.sDist), rel = reliability();
-    const howTxt = r.dir > 0 ? (sc.ext ? "Tirez l'écran vers le haut sur son pied, ou ajoutez un réhausseur." : "Posez le MacBook sur un support + clavier et souris externes.")
-                 : r.dir < 0 ? (sc.ext ? "Descendez l'écran sur son pied ou retirez le réhausseur." : "Baissez le support du MacBook.") : "";
+    const howTxt = r.dir > 0 ? (sc.ext ? "Tirez l'écran vers le haut sur son pied, ou ajoutez un réhausseur." : "Posez le portable sur un support + clavier et souris externes.")
+                 : r.dir < 0 ? (sc.ext ? "Descendez l'écran sur son pied ou retirez le réhausseur." : "Baissez le support du portable.") : "";
     const confirmFirst = !rel.agree;
     // Suivi en direct : dès qu'il faut bouger l'écran, le chiffre et le schéma suivent ses mouvements
     const live = r.dir !== 0 && S.running;
@@ -1026,7 +1055,7 @@ function calArrow(cam){
     else { dir = "left"; a2.className = "cal-arrow right"; a2.hidden = false; }
   }
   a.className = "cal-arrow " + dir; a.hidden = false;
-  a.querySelector("span").textContent = cam === "top" ? "La caméra est ici, en haut de l'écran" : cam === "below" ? "Caméra du MacBook, en dessous" : (a2.hidden ? "Caméra du MacBook, de ce côté" : "Caméra du MacBook : de ce côté");
+  a.querySelector("span").textContent = cam === "top" ? "La caméra est ici, en haut de l'écran" : cam === "below" ? "Caméra du portable, en dessous" : (a2.hidden ? "Caméra du portable, de ce côté" : "Caméra du portable : de ce côté");
 }
 function calMsg(icon, t, s, n){ $("#calMsg").hidden = false; $("#calDot").hidden = true; $("#calIco").setAttribute("href","#"+icon); $("#calT").textContent = t; $("#calS").textContent = s||""; $("#calN").textContent = n ?? ""; }
 function dotFraction(el){
@@ -1062,7 +1091,7 @@ async function runCalibration(){
   // 4 points de mesure, quelle que soit l'installation : la caméra, puis le haut, le bas et le centre de l'écran
   let K = null, camBelowK = null;
   {
-    const where = st.cam === "top" ? "Le petit point noir en haut de cet écran." : `Le petit point noir au-dessus de l'écran du MacBook, ${st.cam === "below" ? "en dessous de cet écran" : "à côté de cet écran"}.`;
+    const where = st.cam === "top" ? "Le petit point noir en haut de cet écran." : `Le petit point noir au-dessus de l'écran du portable, ${st.cam === "below" ? "en dessous de cet écran" : "à côté de cet écran"}.`;
     calArrow(st.cam);
     for(let i=3;i>0;i--){ calMsg("i-cam", "1/4 · Regardez la caméra", where + " Suivez la flèche jaune.", i); await wait(1000); if(S.cancel){ calArrow(null); return fail("Mesure annulée."); } }
     calMsg("i-cam", "Fixez la caméra… ne bougez plus", "Les yeux sur l'objectif, pas sur cet écran.", "●");
@@ -1084,7 +1113,7 @@ async function runCalibration(){
   // Référence de posture : assis droit en regardant le centre de l'écran
   const ref = C.sm, pm = k => { const v = ref.filter(s=>s[k]!=null).map(s=>s[k]); return v.length ? mean(v) : null; };
   const one = {f0:avgV(ref, "raw"), flip:1, dist:mean(ref.map(s=>s.dist)), neck:pm("neck"), tilt:pm("tilt"), shY:pm("shY"), eaY:pm("eaY"),
-    head0:C.head, eye0:C.eye, ev0:pm("ev"), fh0:pm("fh"), roll0:pm("roll"), yaw0:pm("yaw"), ratio0:pm("ratio"), lean0:pm("lean"), twist0:pm("twist"), squint0:pm("squint"), blink0:pm("blink"), theta:th, thetaSrc:st.tiltSrc, mode: st.cam === "top" ? "camera" : "regard"};
+    head0:C.head, eye0:C.eye, ...(st.cam !== "top" && K ? {lapHead:K.head, lapYaw:mean(K.sm.map(s=>s.yaw).filter(v=>v != null))} : {}), ev0:pm("ev"), fh0:pm("fh"), roll0:pm("roll"), yaw0:pm("yaw"), ratio0:pm("ratio"), lean0:pm("lean"), twist0:pm("twist"), squint0:pm("squint"), blink0:pm("blink"), theta:th, thetaSrc:st.tiltSrc, mode: st.cam === "top" ? "camera" : "regard"};
   let doubt = false, err = 0;
   if(st.cam === "top"){
     // Méthode 1 : position de la caméra (juste au-dessus de l'écran)
@@ -1358,7 +1387,7 @@ function updateLiveScreen(b, m, bodyOk, now){
   const W = S.watch; if(!W || !m || !b) return;
   W.scrS = (W.scrS || []).filter(x => now - x.t < (b.mode === "camera" ? 4000 : 15000));
   // on ne mesure l'écran que si vous êtes assis comme pendant la mesure (sinon une mauvaise posture fausserait le calcul)
-  if(bodyOk){
+  if(bodyOk && W.zone !== "lap"){
     let v = null;
     if(b.mode === "camera" && b.theta != null && m.c) v = b.theta - elev(m.c);                       // caméra sous l'horizontale
     else if(b.camBelowK != null && b.kHead != null) v = b.camBelowK + (b.kHead - m.head) + (m.eye - b.kEye); // regard sous l'horizontale
@@ -1457,9 +1486,20 @@ function watchTick(m){
     return;
   }
   W.absentSince = 0; W.absentCounted = false;
-  smooth("flex", S.flip*(elev(b.f0) - m.head), .25);
+  // Deux écrans : quand vous regardez l'écran du portable, votre tête est comparée à « regard sur le portable »,
+  // pas à « regard sur l'écran principal ». Un coup d'œil au portable n'est donc pas une mauvaise posture.
+  let zone = "main";
+  if(b.lapHead != null){
+    const lapH = b.lapHead - 4, lapY = b.lapYaw ?? b.yaw0 ?? 0;
+    const dMain = Math.hypot(m.head - elev(b.f0), .7*(m.yaw - (b.yaw0 ?? 0)));
+    const dLap = Math.hypot(m.head - lapH, .7*(m.yaw - lapY));
+    zone = dLap + 3 < dMain ? "lap" : dMain + 3 < dLap ? "main" : (S.watch?.zone || "main");
+    if(S.watch) S.watch.zone = zone;
+  }
+  const refH = zone === "lap" ? b.lapHead - 4 : elev(b.f0);
+  smooth("flex", S.flip*(refH - m.head), .25);
   smooth("dist", m.dist, .1); smooth("neck", m.neck, .15); smooth("tilt", m.tilt, .15); smooth("shY", m.shY, .15); smooth("eaY", m.eaY, .15); smooth("ev", m.ev, .2); smooth("roll", m.roll, .25);
-  smooth("yaw", m.yaw, .2); smooth("ratio", m.ratio, .15); smooth("lean", m.lean, .15); smooth("twist", m.twist, .15); smooth("squint", m.squint, .04); smooth("hand", m.handFace, .25);
+  smooth("yaw", zone === "lap" ? m.yaw - ((b.lapYaw ?? b.yaw0 ?? 0) - (b.yaw0 ?? 0)) : m.yaw, .2); smooth("ratio", m.ratio, .15); smooth("lean", m.lean, .15); smooth("twist", m.twist, .15); smooth("squint", m.squint, .04); smooth("hand", m.handFace, .25);
   if(m.squint != null && (W.sqS = W.sqS || []).length < 900) W.sqS.push([m.squint, m.blink ?? 0]);
   if(b.squint0 == null && W.sq0 == null && now - W.start > 120000 && W.sqS.length > 200){ W.sq0 = median(W.sqS.map(x=>x[0])); W.bl0 = median(W.sqS.map(x=>x[1])); }
   if(m.blink != null){ const closed = m.blink > Math.max(.45, (b.blink0 ?? W.bl0 ?? 0) + .3); if(W.eyeClosed && !closed) W.blinks.push(now); W.eyeClosed = closed; W.blinks = W.blinks.filter(t => now - t < 60000); }
@@ -1478,7 +1518,7 @@ function watchTick(m){
     $("#liveIco").setAttribute("href", "#" + (ok ? "i-check" : is[0].i));
     $("#lv").textContent = ok ? "Bonne posture" : is[0].t;
     $("#lp").textContent = (ok ? (now < (W.praiseUntil || 0) ? W.praiseTxt : streakTxt()) : is[0].s) + (is.length > 1 ? ` Aussi : ${is.slice(1).map(x=>x.t.toLowerCase()).join(", ")}.` : "") + (eyes.length ? ` Yeux : ${eyes[0].t.toLowerCase()}.` : "");
-    { const kg = neckKg(S.ema.flex); setFact("#f-flex", "≈ " + Math.round(kg) + " kg", kg > 14 ? "bad" : kg > 9 ? "warn" : "good"); const fa = $("#f-flexA"); if(fa) fa.textContent = `tête penchée ${Math.max(0, Math.round(S.ema.flex))}°`; }
+    { const kg = neckKg(S.ema.flex); setFact("#f-flex", "≈ " + Math.round(kg) + " kg", kg > 14 ? "bad" : kg > 9 ? "warn" : "good"); const fa = $("#f-flexA"); if(fa) fa.textContent = `tête penchée ${Math.max(0, Math.round(S.ema.flex))}°${W.zone === "lap" ? " · écran du portable" : ""}`; }
     const sD = b.sDist * S.ema.dist / b.dist; setFact("#f-dist", Math.round(sD) + " cm", distClass(sD));
     const h = hist(), pct = h.p > 5 ? Math.round(100*h.g/h.p) : null;
     setFact("#f-pct", pct==null ? "—" : pct + " %", pct==null ? "" : pct >= 75 ? "good" : pct >= 50 ? "warn" : "bad");
