@@ -322,6 +322,27 @@ body.compact .pomo{padding:8px 10px} body.compact .p-time{font-size:1.4rem}
 .nag div{max-width:420px;text-align:center;background:var(--bad);color:#fff;padding:20px 22px;border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.4);font-weight:700;font-size:1.15rem;line-height:1.3}
 .nag small{display:block;font-weight:500;font-size:.9rem;margin-top:6px;opacity:.9}
 body.nagging .wrap{filter:blur(9px) saturate(.6);transition:filter .6s}
+/* ===== Version simple : une colonne étroite, caméra en vignette, onglets en bas ===== */
+.wrap{max-width:480px!important;margin:0 auto}
+.grid{grid-template-columns:minmax(0,1fr)!important}
+.grid>.stage{position:relative!important;top:0!important}
+.stage.mini{aspect-ratio:16/6!important}
+.mon{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#steps{display:none!important}
+.hright .tool:not(#tSmall){display:none!important}
+body{padding-bottom:86px!important}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+.tabbar .in{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;max-width:480px}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;box-shadow:none;padding:7px 2px;font-size:.78rem;font-weight:700;color:var(--muted);border-radius:12px;min-height:0}
+.tabbar button svg{width:24px;height:24px}
+.tabbar button.on{color:var(--accent);background:color-mix(in srgb,var(--accent) 13%,transparent)}
+.tabbar .dot{position:absolute;margin-left:18px;width:8px;height:8px;border-radius:50%;background:var(--good)}
+.setlinks{display:grid;gap:8px}
+.setlinks button{display:flex;align-items:center;gap:10px;justify-content:flex-start;text-align:left;padding:12px}
+.setlinks a.btn{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:600}
+.setlinks svg{width:22px;height:22px;color:var(--accent);flex:none}
+.wake{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 18%,var(--surface));border:1px solid var(--warn)}
+.wake span{flex:1;font-size:.9rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -382,6 +403,12 @@ body.nagging .wrap{filter:blur(9px) saturate(.6);transition:filter .6s}
 </svg>
 
 <div class="toast" id="toast" hidden role="status"></div>
+<nav class="tabbar" aria-label="Navigation"><div class="in">
+  <button data-tab="suivi" id="tabSuivi"><svg><use href="#i-check"/></svg>Suivi</button>
+  <button data-tab="pauses"><svg><use href="#i-stretch"/></svg>Pauses</button>
+  <button data-tab="bilan"><svg><use href="#i-chart"/></svg>Bilan</button>
+  <button data-tab="reglages"><svg><use href="#i-gear"/></svg>Réglages</button>
+</div></nav>
 <div class="nag" id="nagBox" hidden role="alert"><div><span id="nagT">Redressez-vous</span><small id="nagS">L'app se débloque dès que votre posture est bonne.</small></div></div>
 <div class="wrap">
   <header>
@@ -473,6 +500,8 @@ const store = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
+const NATIVE = window.nuqueNative || null;
+const DL = "https://github.com/fcasado69/nuque/releases/latest/download/";
 const S = {
   step:"prep", view:"prep",
   prefs: Object.assign({progressive:false, sound:"carillon", volume:.6, delay:30, overrides:{}, camMode:"auto", theme:"auto", accent:"sapin", textSize:"normal"}, store.get("nd4_prefs", {})),
@@ -547,7 +576,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "18 · 24 nov. 8 h";
+const APP_VERSION = "19 · 24 nov. 12 h";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -575,6 +604,14 @@ try{
   };
   bc.postMessage({type:"hello", id:me});
 }catch(e){}
+/* App installée depuis le navigateur : au premier lancement, fenêtre étroite sur le côté droit */
+try{
+  if(!NATIVE && matchMedia("(display-mode: standalone)").matches && !S.prefs.sized){
+    const w = 500, h = Math.min(900, screen.availHeight - 40);
+    resizeTo(w, h); moveTo((screen.availLeft || 0) + screen.availWidth - w - 16, (screen.availTop || 0) + 16);
+    S.prefs.sized = true; savePrefs();
+  }
+}catch(e){}
 /* ================= Navigation ================= */
 const ORDER = ["prep","measure","result","watch"];
 function go(view){
@@ -586,6 +623,8 @@ function go(view){
     li.className = main && i===c ? "on" : (i<c ? "done" : "");
   });
   $("#tHist").classList.toggle("on", view==="history"); $("#tSet").classList.toggle("on", view==="settings"); $("#tDesk").classList.toggle("on", view==="desk"); $("#tPomo").classList.toggle("on", view==="pomo");
+  const TAB = {watch:"suivi", prep:"suivi", measure:"suivi", result:"suivi", pomo:"pauses", exo:"pauses", history:"bilan", settings:"reglages", desk:"reglages"};
+  document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("on", b.dataset.tab === TAB[view]));
   render[view]();
   sizeStage();
   try{ renderPomo(); }catch(e){}
@@ -597,6 +636,17 @@ function sizeStage(){
   $("#camSizeP").setAttribute("d", mini ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6");
 }
 $("#camSize").onclick = ()=>{ S.prefs.camMini = !document.querySelector(".stage").classList.contains("mini"); savePrefs(); sizeStage(); };
+/* Onglets du bas */
+document.querySelectorAll(".tabbar button").forEach(b=>b.onclick = async ()=>{
+  unlockAudio();
+  const t = b.dataset.tab;
+  if(t === "pauses") return go("pomo");
+  if(t === "bilan") return go("history");
+  if(t === "reglages") return go("settings");
+  if(S.watching) return go("watch");
+  if(curBase()){ if(await startCamera()) return startWatch(); }
+  go("prep");
+});
 /* Étapes 1 à 4 cliquables : accès direct */
 document.querySelectorAll("#steps li").forEach(li=>{
   li.tabIndex = 0; li.setAttribute("role", "button");
@@ -740,18 +790,18 @@ const render = {
       <details open><summary>Tout ce que je mesure (14 points)</summary><div class="mon" id="mon"></div><p class="note" style="margin-top:8px">Comparé à votre position assis droit pendant la mesure. Vert : bien · orange : à surveiller · rouge : à corriger.</p></details>
       ${r ? `<div class="pill ${r.dir ? "warn" : "good"}">${ico(r.dir>0?"i-up":r.dir<0?"i-down":"i-check")}<span class="grow" id="scrTxt">Écran : <b>${r.dir ? r.title : "bien placé"}</b> <span class="muted">(dernière mesure)</span></span><button class="link" id="recal">Remesurer</button></div>` : ""}
       ${b && b.ev0 == null ? `<div class="pill warn">${ico("i-alert")}<span class="grow">Refaites une mesure pour activer les nouvelles détections (tête sur le côté, enfoncé dans le siège).</span><button class="link" id="recal2">Mesurer</button></div>` : ""}
-      <div class="btns"><button class="link" id="notif">Activer les notifications du Mac</button></div>
+      <div id="wake"></div>
       <p class="note">Le suivi continue si cette fenêtre est derrière vos autres applis. Ne la réduisez pas dans le Dock.</p>
       <button class="link" id="stopW">Arrêter le suivi</button>`;
     $("#goSet").onclick = ()=>go("settings");
     const rc = $("#recal"); if(rc) rc.onclick = ()=>go("measure");
     const rc2 = $("#recal2"); if(rc2) rc2.onclick = ()=>go("measure");
-    $("#notif").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif").textContent = "Indisponible"; } };
+    renderWake();
     $("#pip").onclick = openPip;
     $("#qPomo").onclick = ()=>go("pomo");
     $("#qExo").onclick = startExo;
     renderCheer();
-    $("#stopW").onclick = ()=>{ S.watching = false; $("#watchDot").hidden = true; saveHist(); go("prep"); };
+    $("#stopW").onclick = ()=>{ try{ NATIVE?.blur(false); NATIVE?.pill({cls:"", title:"Suivi arrêté", action:"Ouvrez l'app pour reprendre"}); }catch(e){} S.watching = false; $("#watchDot").hidden = true; saveHist(); go("prep"); };
     if(S.watch?.breakDue) showBreak();
   },
   pomo(){ renderPomoView(); },
@@ -1459,6 +1509,34 @@ function showBreak(){
   $("#bdone").onclick = ()=>{ box.innerHTML = ""; S.watch.sinceBreak = 0; S.watch.breakDue = false; hist().b++; saveHist(); };
 }
 
+/* ================= App de bureau (Mac / Windows) ================= */
+if(NATIVE){
+  document.documentElement.classList.add("native");
+  try{ NATIVE.onCmd(c=>{
+    if(c.cmd === "snooze"){ S.snoozeUntil = Date.now() + c.ms; if(S.watch) S.watch.nag = 0; try{ NATIVE.blur(false); }catch(e){} toast(c.ms ? `Alertes en pause ${Math.round(c.ms/60000)} min` : "Alertes réactivées", 2500); if(!c.ms) S.snoozeUntil = 0; }
+    if(c.cmd === "exo") startExo();
+    if(c.cmd === "pill") openPip();
+  }); }catch(e){}
+}
+const snoozed = () => Date.now() < (S.snoozeUntil || 0);
+
+/* Son et alertes : le navigateur bloque le son tant qu'on n'a pas cliqué. On le débloque au premier clic, n'importe où. */
+["pointerdown","keydown"].forEach(ev=>addEventListener(ev, ()=>{ try{ unlockAudio(); }catch(e){} setTimeout(renderWake, 300); }, {capture:true, passive:true}));
+function renderWake(){
+  const el = $("#wake"); if(!el) return;
+  const noSound = S.prefs.sound !== "aucun" && (!S.audio || S.audio.state !== "running");
+  const notif = !NATIVE && window.Notification ? Notification.permission : "granted";
+  if(!noSound && notif !== "default"){ el.innerHTML = notif === "denied" ? `<p class="note">Les notifications sont bloquées pour ce site : autorisez-les dans les réglages du navigateur (cadenas à gauche de l'adresse).</p>` : ""; return; }
+  el.innerHTML = `<div class="wake">${ico("i-bell")}<span><b>${noSound && notif === "default" ? "Son et alertes coupés" : noSound ? "Son coupé" : "Alertes coupées"}</b><br>Un clic pour être prévenu quand votre posture se dégrade.</span><button class="primary" id="wakeBtn">Activer</button></div>`;
+  $("#wakeBtn").onclick = async ()=>{
+    unlockAudio();
+    if(!NATIVE && window.Notification && Notification.permission === "default"){ try{ await Notification.requestPermission(); }catch(e){} }
+    playSound(S.prefs.sound === "voix" || S.prefs.sound === "aucun" ? "carillon" : S.prefs.sound);
+    notify("Nuque Droite", "Les alertes sont activées. Si vous ne voyez pas ce message, activez les notifications du navigateur dans les réglages de votre ordinateur.");
+    setTimeout(renderWake, 400);
+  };
+}
+
 /* ================= Poids sur la nuque ================= */
 // Charge estimée sur les cervicales selon l'inclinaison de la tête vers l'avant (modèle de Hansraj, 2014).
 // C'est une estimation : elle sert à rendre l'effet de la posture concret, pas à poser un diagnostic.
@@ -1473,7 +1551,7 @@ function neckKg(a){
 function nagTick(ok, is, now){
   const W = S.watch; if(!W) return;
   let st = 0;
-  if(!ok && S.prefs.insist !== false && P0().phase !== "break" && W.issueSince){
+  if(!ok && S.prefs.insist !== false && P0().phase !== "break" && W.issueSince && !snoozed()){
     const d = (now - W.issueSince)/1000 - S.prefs.delay;
     st = d > 60 ? 3 : d > 30 ? 2 : 0;
   }
@@ -1481,7 +1559,8 @@ function nagTick(ok, is, now){
   if(st === 3){ $("#nagT").textContent = is[0].t; $("#nagS").textContent = `${is[0].a}. L'app se débloque dès que votre posture est bonne.`; }
   if(st === prev) return;
   W.nag = st;
-  document.body.classList.toggle("nagging", st === 3); $("#nagBox").hidden = st !== 3;
+  if(NATIVE){ try{ NATIVE.blur(st === 3, is[0]?.t || "", is[0]?.a || ""); }catch(e){} }   // l'app floute tout l'écran
+  else { document.body.classList.toggle("nagging", st === 3); $("#nagBox").hidden = st !== 3; }
   if(pipDoc) pipDoc.body.classList.toggle("insist", st >= 2);
   if(st === 3 && S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say(`${is[0].t}. ${is[0].a}.`, true); else playSound(S.prefs.sound, is[0]); }
   if(st === 0 && prev === 3) toast("Merci, c'est débloqué !", 2500);
@@ -1618,7 +1697,7 @@ function cheerTick(ok, is, now, dt){
   // objectif du jour
   const h = hist(), goal = S.prefs.goal ?? 70, pct = h.p > 600 ? 100*h.g/h.p : 0;
   if(pct >= goal && !h.goalHit){ h.goalHit = 1; saveHist(); celebrate(`Objectif du jour atteint : ${Math.round(pct)} % en bonne posture !`); }
-  if(now - (W.lastCheer || 0) > 5000){ W.lastCheer = now; renderCheer(); }
+  if(now - (W.lastCheer || 0) > 5000){ W.lastCheer = now; renderCheer(); renderWake(); }
 }
 function dayStreak(){
   const goal = S.prefs.goal ?? 70; let n = 0; const d = new Date();
@@ -1695,13 +1774,15 @@ function renderPomoView(update){
     return;
   }
   panel.innerHTML = `
-    <div class="btns" style="justify-content:space-between"><h2>Pomodoro</h2><button class="link" id="back">← Retour</button></div>
+    <h2>Pauses</h2>
+    <button class="primary" id="pvExo" style="width:100%;padding:14px">${ico("i-stretch")} Exercices nuque guidés (2 min)</button>
+    <h3 style="margin:6px 0 0">Minuteur Pomodoro</h3>
     <div class="pv" id="pvBox"><span class="pv-ph" id="pvPh"></span><span class="pv-time" id="pvTime"></span><span class="note" id="pvN"></span><div class="p-tip" id="pvTip" hidden></div></div>
     <div class="btns"><button class="primary" id="pvEx" hidden>Exercices guidés</button><button class="primary" id="pvGo"></button><button id="pvSkip"></button><button class="link" id="pvStop">Arrêter</button></div>
     <div class="srow"><label for="pw2">Concentration</label><select id="pw2">${[15,20,25,30,45,50].map(v=>`<option value="${v}" ${(P.pomoW??25)===v?"selected":""}>${v} min</option>`).join("")}</select></div>
     <div class="srow"><label for="pb2">Pause</label><select id="pb2">${[3,5,10].map(v=>`<option value="${v}" ${(P.pomoB??5)===v?"selected":""}>${v} min</option>`).join("")}</select></div>
     <p class="note">Concentrez-vous ${P.pomoW ?? 25} min, puis pause de ${P.pomoB ?? 5} min (pause longue toutes les 4 sessions). Le minuteur continue si vous changez d'onglet : il s'affiche en haut et dans la pastille. Pendant la pause, les alertes de posture se taisent.</p>`;
-  $("#back").onclick = ()=>go(S.step);
+  $("#pvExo").onclick = ()=>startExo();
   $("#pvGo").onclick = ()=> POMO.end ? pomoPause() : pomoStart();
   $("#pvSkip").onclick = ()=> pomoNext(false);
   $("#pvStop").onclick = pomoStop;
@@ -1758,7 +1839,7 @@ function renderHistory(){
     if(goodD.length && badD.length) link = {g:mean(goodD.map(v=>v.pain)).toFixed(1), b:mean(badD.map(v=>v.pain)).toFixed(1)};
   }
   panel.innerHTML = `
-    <div class="btns" style="justify-content:space-between"><h2>Historique</h2><button class="link" id="back">← Retour</button></div>
+    <h2>Bilan</h2><span id="back" hidden></span>
     ${weekReport()}
     <div class="hero ${tp==null ? "" : tp >= 75 ? "good" : tp >= 50 ? "warn" : "bad"}"><div class="disc">${ico("i-chart")}</div><div><div class="big">${tp==null ? "—" : tp + " %"}</div><div class="muted">du temps en bonne posture aujourd'hui · ${today.a} alerte(s) · ${today.b} pause(s)</div></div></div>
     <div><h3>Aujourd'hui, heure par heure</h3>${hourChart(today)}</div>
@@ -1925,8 +2006,24 @@ async function compareRuler(){
 function renderSettings(){
   const P = S.prefs, seg = (k, opts) => opts.map(([v,l])=>`<button class="segb ${P[k]===v?"sel":""}" data-k="${k}" data-v="${v}">${l}</button>`).join("");
   panel.innerHTML = `
-    <div class="btns" style="justify-content:space-between"><h2>Réglages</h2><button class="link" id="back">← Retour</button></div>
-    <p class="note">Version ${APP_VERSION}</p>
+    <h2>Réglages</h2><span id="back" hidden></span>
+    <section class="set"><h3>Mon poste</h3><div class="setlinks">
+      <button id="sMeasure">${ico("i-screen")} Régler la hauteur de mon écran<span class="muted" style="margin-left:auto">mesure 20 s</span></button>
+      ${curBase() ? `<button id="sResult">${ico("i-chart")} Voir mon dernier résultat</button>` : ""}
+      <button id="sDesk">${ico("i-desk")} Check-list de mon poste</button>
+      <button id="sPip">${ico("i-pip")} Pastille flottante</button>
+    </div></section>
+    ${NATIVE ? `<section class="set"><h3>Application</h3>
+      <label class="check"><input type="checkbox" id="login">Lancer Nuque Droite au démarrage de l'ordinateur</label>
+      <p class="note">Fermer la fenêtre ne quitte pas l'app : elle continue de veiller depuis l'icône ${NATIVE.platform === "darwin" ? "de la barre des menus, en haut de l'écran" : "près de l'horloge, en bas à droite"}.</p></section>`
+    : `<section class="set"><h3>Application pour ordinateur</h3>
+      <p class="note" style="margin-top:0">Plus fiable que le navigateur : pastille toujours visible, son et alertes garantis, lancement au démarrage. S'installe sans droits administrateur.</p>
+      <div class="setlinks">
+        <a class="btn" href="${DL}Nuque-Droite-Installation.exe">${ico("i-window")} Windows : installer</a>
+        <a class="btn" href="${DL}Nuque-Droite-Portable.exe">${ico("i-window")} Windows : version portable (sans installation)</a>
+        <a class="btn" href="${DL}Nuque-Droite-Mac.dmg">${ico("i-window")} Mac</a>
+      </div>
+      <p class="note">Sur un ordinateur professionnel, l'installation peut être bloquée par votre service informatique : utilisez alors cette version web.</p></section>`}
     <section class="set"><h3>Apparence</h3>
       <div class="srow"><span>Thème</span><div class="seg">${seg("theme", [["auto","Auto"],["light","Clair"],["dark","Sombre"]])}</div></div>
       <div class="srow"><span>Couleur</span><div class="swatches">${Object.entries(ACCENTS).map(([k,[l,d,n]])=>`<button class="sw ${P.accent===k?"sel":""}" data-acc="${k}" title="${n}" aria-label="${n}" style="--c1:${l};--c2:${d}"></button>`).join("")}</div></div>
@@ -1950,11 +2047,16 @@ function renderSettings(){
     <section class="set"><h3>Alertes</h3>
       <div class="srow"><label for="delay">Prévenir après</label><select id="delay"><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option></select></div>
       <label class="check"><input type="checkbox" id="insist" ${P.insist === false ? "" : "checked"}>Alerte qui insiste : si la mauvaise posture dure, la pastille clignote en rouge (après 30 s de plus), puis la fenêtre de l'app se floute jusqu'à ce que vous vous redressiez (après 1 min).</label>
-      <div class="btns"><button id="notif2">Activer les notifications du Mac</button></div>
+      ${NATIVE ? "" : `<div class="btns"><button id="notif2">Activer les notifications</button></div>`}
       <p class="note">Une mauvaise posture s'affiche tout de suite ; le son et la notification attendent ce délai. Ensuite, 2 minutes minimum entre deux alertes. Bilan à 12 h 30 et 17 h 30.</p>
     </section>
     </section>`;
-  $("#back").onclick = ()=>go(S.step);
+  $("#sMeasure").onclick = async ()=>{ unlockAudio(); if(await startCamera()) go("measure"); };
+  if($("#sResult")) $("#sResult").onclick = ()=>go("result");
+  $("#sDesk").onclick = ()=>go("desk");
+  $("#sPip").onclick = ()=>openPip();
+  if(NATIVE && $("#login")){ NATIVE.getLogin().then(v=>{ $("#login").checked = !!v; }).catch(()=>{}); $("#login").onchange = e=>NATIVE.setLogin(e.target.checked); }
+  panel.insertAdjacentHTML("beforeend", `<p class="note">Version ${APP_VERSION}</p>`);
   panel.querySelectorAll(".segb").forEach(b=>b.onclick = ()=>{ P[b.dataset.k] = b.dataset.v; savePrefs(); applyTheme(); renderSettings(); });
   panel.querySelectorAll("[data-acc]").forEach(b=>b.onclick = ()=>{ P.accent = b.dataset.acc; savePrefs(); applyTheme(); renderSettings(); });
   panel.querySelectorAll("[data-snd]").forEach(b=>b.onclick = ()=>{ P.sound = b.dataset.snd; savePrefs(); playSound(P.sound); renderSettings(); });
@@ -1968,7 +2070,7 @@ function renderSettings(){
   $("#cheerOn").onchange = e=>{ P.cheer = e.target.checked; savePrefs(); };
   [["#pw","pomoW"],["#pb","pomoB"],["#pl","pomoL"]].forEach(([id,k])=>$(id).onchange = e=>{ P[k] = +e.target.value; savePrefs(); if(POMO.phase !== "idle" && !POMO.end){ POMO.left = null; } renderPomo(); });
   $("#delay").value = String(P.delay); $("#delay").onchange = e=>{ P.delay = +e.target.value; savePrefs(); };
-  $("#notif2").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif2").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif2").textContent = "Indisponible"; } };
+  if($("#notif2")) $("#notif2").onclick = async ()=>{ try{ const x = await Notification.requestPermission(); $("#notif2").textContent = x==="granted" ? "Notifications activées" : "Notifications refusées"; }catch(e){ $("#notif2").textContent = "Indisponible"; } };
 }
 
 /* ================= Mon poste : check-list visuelle (INRS) ================= */
@@ -2026,9 +2128,10 @@ function playSound(name = S.prefs.sound, issue = {t:"Redressez-vous", a:"Dos con
   }catch(e){}
 }
 function notify(title, body){ try{ if(window.Notification && Notification.permission==="granted") new Notification(title, {body, silent:true, tag:"nuque"}); }catch(e){} }
-function alertUser(x){ playSound(S.prefs.sound, x); document.title = "⚠ " + x.t; notify(x.t, x.a ? `${x.a}. ${x.s}` : x.s); }
+function alertUser(x){ if(snoozed()) return; playSound(S.prefs.sound, x); document.title = "⚠ " + x.t; notify(x.t, x.a ? `${x.a}. ${x.s}` : x.s); }
 let pipCanvas = null, pipVideo = null, pipDoc = null;
 async function openPip(){
+  if(NATIVE){ NATIVE.pillShow(true); return; }
   // Petite pastille flottante par-dessus les autres applis : le problème, puis quoi faire
   if(window.documentPictureInPicture){
     try{
@@ -2054,6 +2157,7 @@ async function openPip(){
 }
 function updatePip(cls, title, action){
   const pt = pomoPipTxt(); if(pt) action = pt + " · " + action;
+  if(NATIVE){ try{ NATIVE.pill({cls, title, action, insist:(S.watch?.nag || 0) >= 2}); }catch(e){} return; }
   const col = {good:"#2FA867", warn:"#D99520", bad:"#E2582A"}[cls] || "#556";
   if(pipDoc){
     const d = pipDoc.getElementById("d"), t = pipDoc.getElementById("t"), a = pipDoc.getElementById("a");
