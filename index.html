@@ -560,8 +560,16 @@ const PRESETS = [
 ];
 const heightOf = (d, r) => d*2.54*r[1]/Math.hypot(r[0], r[1]);
 const fromPreset = p => ({h:heightOf(p.d, p.r), label:p.l, ext:!!p.ext});
+function workScreen(){
+  const sc = S.screens; if(!sc || !sc.list || sc.list.length < 2) return null;
+  const cur = sc.list[sc.cur], exts = sc.list.filter(x=>!x.internal);
+  if(S.prefs.workInternal) return sc.list.find(x=>x.internal) || null;
+  if(cur && !cur.internal) return cur;                               // fenêtre déjà sur un écran externe
+  return exts.sort((a,b)=>b.w*b.h - a.w*a.h)[0] || null;             // sinon le plus grand écran externe
+}
 function guessScreen(){
-  const w = screen.width, h = screen.height, r = w/h;
+  const ws = workScreen();
+  const w = ws ? ws.w : screen.width, h = ws ? ws.h : screen.height, r = w/h;
   if(r < 1.7 && w <= 1800) return {...fromPreset(PRESETS[w<=1470?0 : w<=1512?1 : w<=1710?2 : 3]), auto:true};
   if(r > 2.2) return {...fromPreset(PRESETS[8]), auto:true};
   const d = w<=1600?22 : w<=2048?24 : w<=2560?27 : 32;
@@ -593,10 +601,11 @@ const curBase = () => { const sc = currentScreen(); return S.bases[sc.key] || (S
 async function detectLayout(ask){
   let scr = null;
   try{
-    if(NATIVE?.screens) scr = await NATIVE.screens();
-    else if(window.getScreenDetails && (ask || (await navigator.permissions.query({name:"window-management"}).catch(()=>({}))).state === "granted")){
+    if(window.getScreenDetails && NATIVE){ try{ const d = await getScreenDetails(); scr = {list: d.screens.map(x=>({internal:!!x.isInternal, x:x.left, y:x.top, w:x.width, h:x.height, ref:x})), cur: d.screens.indexOf(d.currentScreen)}; }catch(e){} }
+    if(!scr && NATIVE?.screens) scr = await NATIVE.screens();
+    else if(!scr && window.getScreenDetails && (ask || (await navigator.permissions.query({name:"window-management"}).catch(()=>({}))).state === "granted")){
       const d = await getScreenDetails();
-      scr = {list: d.screens.map(x=>({internal:!!x.isInternal, x:x.left, y:x.top, w:x.width, h:x.height})), cur: d.screens.indexOf(d.currentScreen)};
+      scr = {list: d.screens.map(x=>({internal:!!x.isInternal, x:x.left, y:x.top, w:x.width, h:x.height, ref:x})), cur: d.screens.indexOf(d.currentScreen)};
     }
   }catch(e){}
   S.screens = scr;
@@ -604,10 +613,11 @@ async function detectLayout(ask){
   let cam = null, why = "";
   if(!builtIn){ cam = "top"; why = "webcam posée sur l'écran"; }
   else if(scr && scr.list.length){
-    const cur = scr.list[scr.cur] || scr.list[0], lap = scr.list.find(x=>x.internal);
+    S.screens = scr;
+    const cur = workScreen() || scr.list[scr.cur] || scr.list[0], lap = scr.list.find(x=>x.internal);
     if(!lap){ cam = "top"; why = "caméra de l'écran"; }
     else if(cur === lap || scr.list.length === 1){ cam = "top"; why = "écran du portable"; }
-    else { cam = lap.y >= cur.y + cur.h*0.6 ? "below" : "side"; why = cam === "below" ? "écran externe + portable en dessous" : "écran externe + portable à côté"; }
+    else { cam = lap.y >= cur.y + cur.h*0.6 ? "below" : "side"; why = cam === "below" ? "vous regardez l'écran du haut, caméra du portable en dessous" : "vous regardez l'écran externe, caméra du portable à côté"; }
   } else if(currentScreen().ext){ cam = (screen.isExtended ? "below" : "side"); why = "écran externe + caméra du portable"; }
   S.layout = cam ? {cam, why} : null;
   return S.layout;
@@ -625,7 +635,7 @@ function tiltSVG(d){
   return `<svg viewBox="0 0 80 50"><path d="M14 44h52" class="base"/><path d="M40 44L${x2.toFixed(1)} ${y2.toFixed(1)}" class="lid"/><circle cx="${(40 + 33*Math.sin(r)).toFixed(1)}" cy="${(44 - 33*Math.cos(r)).toFixed(1)}" r="2.6" class="cam"/><path d="M40 44V12" class="ref"/><circle cx="6" cy="18" r="3.2" class="eye"/><path d="M11 18h6" class="ref"/></svg>`;
 }
 
-const APP_VERSION = "22 · 24 nov. 12 h 50";
+const APP_VERSION = "23 · 24 nov. 13 h";
 /* Mise à jour : quand une nouvelle version est installée, on recharge (sauf pendant le suivi, pour ne pas l'interrompre) */
 try{
   if("serviceWorker" in navigator){
@@ -770,8 +780,11 @@ const render = {
     const tiltOpt = d => `<button class="opt ${st.tiltSrc!=="mesure" && st.tilt===d?"sel":""}" data-tilt="${d}">${tiltSVG(d)}<span>${d===0?"Droit":d+"°"}</span></button>`;
     panel.innerHTML = `
       <h2>Votre installation</h2>
-      ${!S.prefs.setup?.[sc.key] && S.layout ? `<div class="pill good">${ico("i-check")}<span class="grow">Détecté automatiquement : <b>${S.layout.why}</b>.</span><button class="link" id="chg">Changer</button></div>` : ""}
-      <div id="camQ" ${!S.prefs.setup?.[sc.key] && S.layout ? "hidden" : ""}><p class="q">Où est la caméra ?</p>
+      ${!S.prefs.setup?.[sc.key] && S.layout ? `<div class="pill good">${ico("i-check")}<span class="grow">Détecté automatiquement : <b>${S.layout.why}</b>. La mesure s'affichera sur l'écran que vous regardez.</span><button class="link" id="chg">Changer</button></div>` : ""}
+      ${screen.isExtended && !S.screens ? `<div class="pill warn">${ico("i-screen")}<span class="grow">Vous avez plusieurs écrans : autorisez l'app à les voir, pour mesurer celui que vous regardez.</span><button class="link" id="askScr">Autoriser</button></div>` : ""}
+      <div id="camQ" ${!S.prefs.setup?.[sc.key] && S.layout ? "hidden" : ""}>
+        ${S.screens?.list?.length > 1 && S.screens.list.some(x=>x.internal) ? `<p class="q">Écran que vous regardez pour travailler : <b>${S.prefs.workInternal ? "celui du portable" : "l'écran externe"}</b> <button class="link" id="wsw">${S.prefs.workInternal ? "C'est l'écran externe" : "C'est celui du portable"}</button></p>` : ""}
+        <p class="q">Où est la caméra ?</p>
         <div class="opts">
           ${camOpt("top", "En haut de cet écran", `<svg viewBox="0 0 80 50"><rect x="14" y="8" width="52" height="32" rx="2"/><circle cx="40" cy="5" r="3" class="cam"/></svg>`)}
           ${camOpt("side", "Portable à côté", `<svg viewBox="0 0 80 50"><rect x="4" y="6" width="46" height="30" rx="2"/><rect x="56" y="22" width="22" height="15" rx="1"/><path d="M53 40h28"/><circle cx="67" cy="19.5" r="2.5" class="cam"/></svg>`)}
@@ -789,6 +802,8 @@ const render = {
       <div class="btns gobar"><button class="primary" id="go" disabled>Lancer la mesure (20 s)</button><button class="link" id="force" hidden>Lancer quand même</button></div>
       <p class="note" id="msg"></p>`;
     panel.querySelectorAll("[data-cam]").forEach(b=>b.onclick = ()=>{ saveSetup({cam:b.dataset.cam}); render.measure(); });
+    if($("#askScr")) $("#askScr").onclick = async ()=>{ await detectLayout(true); render.measure(); };
+    if($("#wsw")) $("#wsw").onclick = async ()=>{ S.prefs.workInternal = !S.prefs.workInternal; savePrefs(); await detectLayout(false); render.measure(); };
     if($("#chg")) $("#chg").onclick = ()=>{ $("#camQ").hidden = false; $("#chg").closest(".pill").hidden = true; };
     if(!S.layoutTried){ S.layoutTried = true; detectLayout(false).then(l=>{ if(l && S.view === "measure" && !S.prefs.setup?.[sc.key]) render.measure(); }); }
     panel.querySelectorAll("[data-tilt]").forEach(b=>b.onclick = ()=>{ saveSetup({tilt:+b.dataset.tilt, tiltSrc:"dessin"}); render.measure(); });
@@ -1114,13 +1129,19 @@ async function lookAt(fy){
   const s = summarize(await grab(2000)); beep(880,.08,true);
   return s && {...s, fy:real};
 }
+// Plein écran sur l'écran que vous regardez : le rond s'affiche là où vous travaillez, même si la fenêtre est sur le portable
+async function fullOnWork(){
+  const ws = workScreen();
+  try{ await document.documentElement.requestFullscreen(ws?.ref ? {screen: ws.ref} : undefined); }
+  catch(e){ try{ await document.documentElement.requestFullscreen(); }catch(_){} }
+}
 function endCal(){ try{ calArrow(null); }catch(e){} $("#cal").hidden = true; cal.active = false; S.busy = false; if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
 function fail(msg){ endCal(); const m = $("#msg"); if(m){ m.textContent = msg; m.style.color = "var(--bad)"; } const g = $("#go"); if(g){ g.disabled = false; g.textContent = "Recommencer"; } }
 
 async function runCalibration(){
   if(S.busy) return; S.busy = true; S.cancel = false;
   $("#cal").hidden = false; $("#calStop").onclick = ()=>{ S.cancel = true; };
-  try{ await document.documentElement.requestFullscreen(); }catch(e){}
+  await fullOnWork();
   const sc = currentScreen(), st = setupOf(), th = st.tilt;
   const tn = a => Math.tan(a*RAD), at = x => Math.atan(x)*DEG;
   const avgV = (arr, k) => { const v=[0,0,0]; arr.forEach(s=>{v[0]+=s[k][0];v[1]+=s[k][1];v[2]+=s[k][2];}); const n=Math.hypot(...v); return v.map(x=>x/n); };
@@ -1269,7 +1290,7 @@ async function startGuide(){
   // Caméra sur l'écran : elle bouge avec lui, on suit sa position. Caméra à côté : on suit le regard vers un rond au centre.
   G = {b, sc, mode: b.mode === "regard" && b.kHead != null ? "dot" : "cam", top:null, lastSay:0, lastCm:null, okSince:0, voice:true, saidOk:false};
   const box = $("#guideBox"); box.hidden = false; box.className = "cal guide";
-  try{ await document.documentElement.requestFullscreen(); }catch(e){}
+  await fullOnWork();
   $("#gDot").hidden = G.mode !== "dot"; $("#gCheck").hidden = true;
   $("#gSub").textContent = G.mode === "dot" ? "Regardez le rond pendant que vous montez ou descendez l'écran." : "Bougez l'écran doucement en regardant cette page. Gardez la même inclinaison.";
   $("#gVoice").checked = true; $("#gVoice").onchange = e=>{ G.voice = e.target.checked; };
@@ -2315,6 +2336,7 @@ window.addEventListener("beforeunload", saveHist);
 window.__nd = {setPipDoc:d=>{pipDoc=d}, cal, onMeasure:m=>onMeasure(m), S, go, screenAdvice, addToSeries, currentScreen, recordHist, hist};
 // Ouverture : si une mesure existe, le suivi se lance tout de suite
 (async ()=>{
+  try{ if(screen.isExtended || NATIVE) await detectLayout(false); }catch(e){}   // sans question : seulement si déjà autorisé
   if(!curBase()) return go("prep");
   go("prep");
   panel.innerHTML = `<div class="hero"><div class="disc">${ico("i-cam")}</div><div><div class="big" style="font-size:1.4rem">Démarrage du suivi…</div><div class="muted">Caméra et analyse en cours de chargement.</div></div></div>`;
