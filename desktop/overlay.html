@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Redressez-vous</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+  /* Le flou vient du système (Mac : vibrancy, Windows 11 : acrylique). Ce voile sombre garantit l'effet partout. */
+  body{background:rgba(10,16,15,.55);}
+  body.win{background:rgba(10,16,15,.82)}
+  body{display:flex;align-items:center;justify-content:center;animation:in .5s ease-out}
+  @keyframes in{from{opacity:0}to{opacity:1}}
+  .c{max-width:460px;text-align:center;background:#C2401F;color:#fff;padding:24px 26px;border-radius:20px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+  h1{margin:0 0 6px;font-size:24px}
+  p{margin:0 0 16px;font-size:16px;opacity:.95}
+  small{display:block;margin-top:12px;font-size:13px;opacity:.85}
+  button{font:inherit;font-weight:600;font-size:14px;padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.12);color:#fff;cursor:pointer}
+  button:hover{background:rgba(255,255,255,.25)}
+</style></head>
+<body>
+  <div class="c">
+    <h1 id="t">Redressez-vous</h1>
+    <p id="a">L'écran redevient net dès que votre posture est bonne.</p>
+    <button id="s5">Ignorer 5 min</button> <button id="s30">Pause 30 min</button>
+    <small>L'écran redevient net dès que votre posture est bonne.</small>
+  </div>
+<script>
+  if (overlayApi.platform !== "darwin") document.body.classList.add("win");
+  overlayApi.onMsg(m => {
+    if (!m) return;
+    if (m.t) document.getElementById("t").textContent = m.t;
+    if (m.a) document.getElementById("a").textContent = m.a + ".";
+  });
+  document.getElementById("s5").onclick = () => overlayApi.snooze(5 * 60e3);
+  document.getElementById("s30").onclick = () => overlayApi.snooze(30 * 60e3);
+  addEventListener("keydown", e => { if (e.key === "Escape") overlayApi.snooze(5 * 60e3); });
+</script>
+</body></html>

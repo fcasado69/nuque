@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Nuque Droite</title>
+<style>
+  html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+  .p{position:absolute;inset:2px;display:flex;align-items:center;gap:10px;padding:0 8px 0 12px;border-radius:14px;
+     background:#0E1514;color:#F1F6F4;box-shadow:0 4px 16px rgba(0,0,0,.35);-webkit-app-region:drag;cursor:move}
+  .p.insist{animation:pz 1.2s ease-in-out infinite}
+  @keyframes pz{0%,100%{background:#8E2A12}50%{background:#E2582A}}
+  #d{width:14px;height:14px;border-radius:50%;background:#556;flex:none}
+  .txt{flex:1;min-width:0;line-height:1.2}
+  #t{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #a{font-size:12px;color:#9FB4AE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p.insist #a{color:#fff}
+  #a:not(:empty)::before{content:"→ "}
+  .b{-webkit-app-region:no-drag;border:0;background:none;color:#9FB4AE;font-size:15px;cursor:pointer;padding:4px 5px;border-radius:6px;line-height:1}
+  .b:hover{background:rgba(255,255,255,.12);color:#fff}
+</style></head>
+<body>
+  <div class="p" id="p">
+    <span id="d"></span>
+    <div class="txt"><div id="t">Nuque Droite</div><div id="a">Démarrage…</div></div>
+    <button class="b" id="open" title="Ouvrir l'app">⤢</button>
+    <button class="b" id="hide" title="Masquer la pastille">✕</button>
+  </div>
+<script>
+  const col = {good:"#2FA867", warn:"#D99520", bad:"#E2582A"};
+  pillApi.onState(s => {
+    document.getElementById("d").style.background = col[s.cls] || "#556";
+    document.getElementById("t").textContent = s.title || "";
+    document.getElementById("a").textContent = s.action || "";
+    document.getElementById("p").classList.toggle("insist", !!s.insist);
+  });
+  document.getElementById("open").onclick = () => pillApi.open();
+  document.getElementById("hide").onclick = () => pillApi.hide();
+</script>
+</body></html>

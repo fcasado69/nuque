@@ -1,0 +1,72 @@
+name: App de bureau (Mac + Windows)
+
+on:
+  push:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+          - os: windows-latest
+            target: win
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      # Copie embarquée de la version web (utilisée seulement sans connexion)
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: desktop/web
+      - name: Nettoyer la copie web
+        shell: bash
+        run: rm -rf desktop/web/.git desktop/web/README.md
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Installer
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+      - name: Fabriquer l'app
+        working-directory: desktop
+        run: npx electron-builder --${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.target }}
+          if-no-files-found: error
+          path: |
+            desktop/dist/Nuque-Droite-*.exe
+            desktop/dist/Nuque-Droite-*.dmg
+            desktop/dist/Nuque-Droite-*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v1.0.${{ github.run_number }}
+          name: Nuque Droite — app de bureau 1.0.${{ github.run_number }}
+          make_latest: "true"
+          files: out/*
+          body: |
+            **Windows** : `Nuque-Droite-Installation.exe` (s'installe sans droits administrateur) ou `Nuque-Droite-Portable.exe` (rien à installer).
+            **Mac** : `Nuque-Droite-Mac.dmg`.
+
+            L'app n'est pas encore signée : Windows peut afficher « Windows a protégé votre ordinateur » (Informations complémentaires › Exécuter quand même) ; sur Mac, ouvrez Réglages Système › Confidentialité et sécurité › « Ouvrir quand même ».
+            Les images de la caméra restent sur votre ordinateur.

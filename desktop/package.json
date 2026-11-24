@@ -1,0 +1,96 @@
+{
+  "name": "nuque-droite",
+  "productName": "Nuque Droite",
+  "version": "1.0.0",
+  "description": "Garder la tête droite au bureau : suivi de posture par la caméra, en local.",
+  "author": "Fabien Casado",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.1"
+  },
+  "build": {
+    "appId": "fr.nuquedroite.app",
+    "productName": "Nuque Droite",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "pill.html",
+      "pill-preload.js",
+      "overlay.html",
+      "overlay-preload.js",
+      "icon.png",
+      "web/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.healthcare-fitness",
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "Nuque Droite analyse votre posture avec la caméra. Les images restent sur votre ordinateur.",
+        "LSUIElement": false
+      },
+      "artifactName": "Nuque-Droite-Mac.${ext}"
+    },
+    "dmg": {
+      "artifactName": "Nuque-Droite-Mac.dmg",
+      "title": "Nuque Droite"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Nuque-Droite-Installation.exe",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nuque Droite"
+    },
+    "portable": {
+      "artifactName": "Nuque-Droite-Portable.exe"
+    },
+    "publish": null
+  }
+}
