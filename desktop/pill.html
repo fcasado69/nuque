@@ -17,6 +17,14 @@
   #a:not(:empty)::before{content:"→ "}
   .b{border:0;background:none;color:#9FB4AE;font-size:15px;cursor:pointer;padding:4px 5px;border-radius:6px;line-height:1}
   .b:hover{background:rgba(255,255,255,.12);color:#fff}
+  /* Petite taille (par défaut) : une seule ligne, boutons visibles au survol */
+  body.small .p{gap:7px;padding:0 4px 0 2px;border-radius:12px;inset:2px}
+  body.small .grip{width:10px;height:24px;font-size:11px}
+  body.small #d{width:10px;height:10px}
+  body.small #t{font-size:12px;font-weight:600}
+  body.small #a{display:none}
+  body.small .b{font-size:13px;padding:2px 4px;opacity:0;transition:opacity .15s}
+  body.small .p:hover .b{opacity:1}
 </style></head>
 <body>
   <div class="p" id="p" title="Glisser pour déplacer">
@@ -34,6 +42,8 @@
     document.getElementById("a").textContent = s.action || "";
     document.getElementById("p").classList.toggle("insist", !!s.insist);
   });
+  pillApi.onSize(s => document.body.classList.toggle("small", s !== "big"));
+  document.body.classList.add("small");
   document.getElementById("open").onclick = () => pillApi.open();
   document.getElementById("hide").onclick = () => pillApi.hide();
 

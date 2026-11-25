@@ -58,20 +58,34 @@ function loadApp() {
 function showWin() { if (!win) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
 
 /* ---------- pastille toujours au premier plan ---------- */
+// Discrète par défaut (petite, une ligne), elle s'agrandit seulement pendant une alerte
+const PILL_SMALL = { w: 196, h: 40 }, PILL_BIG = { w: 300, h: 64 };
+let pillBig = false;
+const pillDim = () => pillBig ? PILL_BIG : PILL_SMALL;
 function defaultPillPos() {
-  const wa = screen.getPrimaryDisplay().workArea;
-  return { x: wa.x + wa.width - 316, y: wa.y + wa.height - 80 };
+  const wa = screen.getPrimaryDisplay().workArea, d = pillDim();
+  return { x: wa.x + wa.width - d.w - 12, y: wa.y + wa.height - d.h - 12 };
+}
+// Change de taille en gardant le coin bas-droit au même endroit
+function setPillBig(big) {
+  if (!pill || big === pillBig) return;
+  const b = pill.getBounds(), right = b.x + b.width, bottom = b.y + b.height;
+  pillBig = big;
+  const d = pillDim(), c = clampPill(right - d.w, bottom - d.h);
+  pill.setResizable(true); pill.setBounds({ x: c.x, y: c.y, width: d.w, height: d.h }); pill.setResizable(false);
+  pill.webContents.send("size", big ? "big" : "small");
 }
 // Garde la pastille entièrement visible sur l'écran le plus proche
 function clampPill(x, y) {
-  const W = 300, H = 64;
+  const { w: W, h: H } = pillDim();
   const wa = screen.getDisplayNearestPoint({ x: x + W / 2, y: y + H / 2 }).workArea;
   return {
     x: Math.round(Math.min(Math.max(x, wa.x), wa.x + wa.width - W)),
     y: Math.round(Math.min(Math.max(y, wa.y), wa.y + wa.height - H))
   };
 }
-function savePillPos() { if (!pill) return; const b = pill.getBounds(); cfg.pillPos = { x: b.x, y: b.y }; writeCfg(cfg); }
+// On retient le coin bas-droit, qui ne bouge pas quand la pastille change de taille
+function savePillPos() { if (!pill) return; const b = pill.getBounds(); cfg.pillCorner = { r: b.x + b.width, b: b.y + b.height }; writeCfg(cfg); }
 function resetPill() {
   if (!pill) return;
   const p = defaultPillPos(); pill.setPosition(p.x, p.y); savePillPos();
@@ -99,9 +113,10 @@ function pillDragStart() {
 }
 
 function createPill() {
-  const p = cfg.pillPos ? clampPill(cfg.pillPos.x, cfg.pillPos.y) : defaultPillPos();
+  const d = pillDim();
+  const p = cfg.pillCorner ? clampPill(cfg.pillCorner.r - d.w, cfg.pillCorner.b - d.h) : defaultPillPos();
   pill = new BrowserWindow({
-    width: 300, height: 64, x: p.x, y: p.y, frame: false, transparent: true, resizable: false, movable: true,
+    width: d.w, height: d.h, x: p.x, y: p.y, frame: false, transparent: true, resizable: false, movable: true,
     alwaysOnTop: true, skipTaskbar: true, focusable: false, acceptFirstMouse: true, hasShadow: true, show: false, fullscreenable: false,
     webPreferences: { preload: path.join(__dirname, "pill-preload.js") }
   });
@@ -109,7 +124,7 @@ function createPill() {
   pill.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   pill.loadFile(path.join(__dirname, "pill.html"));
   pill.on("moved", () => { if (!pillDrag) savePillPos(); });
-  pill.webContents.on("did-finish-load", () => { if (lastPill) pill.webContents.send("state", lastPill); });
+  pill.webContents.on("did-finish-load", () => { pill.webContents.send("size", pillBig ? "big" : "small"); if (lastPill) pill.webContents.send("state", lastPill); });
 }
 function setPillVisible(on) {
   pillWanted = on; cfg.pill = on; writeCfg(cfg);
@@ -180,6 +195,7 @@ function setLogin(on) {
 /* ---------- échanges avec la page ---------- */
 ipcMain.on("pill", (e, s) => {
   lastPill = s;
+  setPillBig(s.cls === "warn" || s.cls === "bad" || !!s.insist);
   pill?.webContents.send("state", s);
   if (pill && pillWanted && !pill.isVisible()) pill.showInactive();
   tray?.setToolTip(`Nuque Droite — ${s.title || ""}`);
