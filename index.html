@@ -2327,6 +2327,17 @@ function playSound(name = S.prefs.sound, issue = {t:"Redressez-vous", a:"Dos con
 function notify(title, body){ try{ if(window.Notification && Notification.permission==="granted") new Notification(title, {body, silent:true, tag:"nuque"}); }catch(e){} }
 function alertUser(x){ if(snoozed()) return; playSound(S.prefs.sound, x); document.title = "⚠ " + x.t; notify(x.t, x.a ? `${x.a}. ${x.s}` : x.s); }
 let pipCanvas = null, pipVideo = null, pipDoc = null;
+// Ouverture automatique de la mini-fenêtre quand on change d'onglet (Chrome/Edge sur ordinateur :
+// autorisé sans clic parce que l'app utilise la caméra). Elle se referme seule quand on revient sur l'onglet.
+try{
+  if(!NATIVE && "mediaSession" in navigator){
+    navigator.mediaSession.setActionHandler("enterpictureinpicture", async ()=>{
+      if(!S.watching || pipDoc || document.pictureInPictureElement) return;
+      await openPip();
+      if(S.watch) updatePip("", "Suivi en cours", "Analyse de votre posture…");
+    });
+  }
+}catch(e){ /* navigateur sans ouverture automatique : bouton « Pastille flottante » */ }
 async function openPip(){
   if(NATIVE){ NATIVE.pillShow(true); return; }
   // Petite pastille flottante par-dessus les autres applis : le problème, puis quoi faire
