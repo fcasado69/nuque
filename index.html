@@ -366,6 +366,65 @@ body[data-view="measure"] .preview .mini{display:none}
 .setlinks svg{width:22px;height:22px;color:var(--accent);flex:none}
 .wake{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 18%,var(--surface));border:1px solid var(--warn)}
 .wake span{flex:1;font-size:.9rem}
+/* ===== Tout sur un seul écran : la page ne défile jamais ===== */
+html,body{height:100%;overflow:hidden}
+body{box-sizing:border-box;padding-top:12px!important;padding-bottom:calc(var(--tabH,72px) + 10px)!important}
+.wrap{height:100%;min-height:0;gap:10px!important}
+.side{display:none}
+.wrap>details{display:none!important}               /* « Sur quoi reposent les conseils » : déplacé dans Réglages */
+h1{font-size:1.4rem}
+.grid{flex:1 1 auto;min-height:0;gap:10px!important;grid-template-rows:auto minmax(0,1fr)}
+.panel{min-height:0;overflow:hidden;padding:16px;gap:12px}
+.grid>.panel{align-self:stretch;height:auto;max-height:100%}
+.panel.lastresort{overflow-y:auto}
+.wake svg{width:26px;height:26px;flex:none;color:var(--warn)}
+.wake button{flex:none}
+/* Grand écran : caméra à gauche, contenu à droite, tout en hauteur */
+@media (min-width:900px){
+  .wrap{max-width:1180px!important}
+  .grid{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)!important;grid-template-rows:auto minmax(0,1fr);grid-template-areas:"stage panel" "side panel"}
+  .grid>.stage{grid-area:stage;align-self:start;aspect-ratio:4/3!important;max-height:52vh;width:100%;margin:0 auto}
+  .grid>.panel{grid-area:panel}
+  .side{grid-area:side;display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+  .side:empty{display:none}
+  .grid:has(> .side:not(:empty)) > .stage{aspect-ratio:auto!important;height:min(34vh,300px)}
+  .side details{background:var(--surface);border:1px solid var(--line);padding:10px 14px}
+  .side .mon{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .tabbar .in{max-width:720px}
+  body[data-view="measure"] .grid>.stage{max-width:none;aspect-ratio:4/3!important}
+}
+/* Niveaux de compactage, ajoutés automatiquement si l'écran est trop petit */
+body.fit1 .panel{padding:12px;gap:9px}
+body.fit1 .hero{padding:10px 12px;gap:12px}
+body.fit1 .hero .disc{width:52px;height:52px} body.fit1 .hero .disc svg{width:30px;height:30px}
+body.fit1 .hero .big{font-size:1.4rem}
+body.fit1 h2{font-size:1.2rem}
+body.fit1 .fact{padding:6px 4px}
+body.fit1 .qa button{padding:6px 4px;font-size:.74rem} body.fit1 .qa svg{width:18px;height:18px}
+body.fit1 .pill{padding:7px 10px;font-size:.86rem} body.fit1 .pill svg{width:20px;height:20px}
+body.fit1 .mt{padding:4px 6px} body.fit1 .mon{gap:4px}
+body.fit1 .setlinks button,body.fit1 .setlinks a.btn{padding:8px 10px}
+body.fit2 .panel .note{display:none}
+#pvExo{display:flex;align-items:center;justify-content:center;gap:10px}
+#pvExo svg{width:28px;height:28px;flex:none}
+body.fit1 #lrGauge svg{max-height:30vh;width:100%}
+body.fit2 #lrGauge svg{max-height:22vh}
+body.fit3 #lrGauge svg{max-height:16vh}
+body.fit2 .panel svg{max-height:22vh}
+body.fit2 .cheer{display:none}
+@media (max-width:899px){body.fit2:not([data-view="measure"]):not([data-view="exo"]) .stage.mini{aspect-ratio:16/4!important}}
+body.fit2 .panel{font-size:.875rem}
+@media (max-width:899px){body.fit3:not([data-view="measure"]):not([data-view="exo"]) .grid>.stage{aspect-ratio:16/3!important}}
+body.fit3 .panel h2{font-size:1.05rem}
+/* Rubriques (Réglages) et pages : on change de rubrique au lieu de faire défiler */
+.subtabs{display:flex;flex-wrap:wrap;gap:6px;flex:none}
+.subtabs button{padding:6px 11px;font-size:.8rem;border-radius:999px;font-weight:600}
+.subtabs button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.panel [data-fit-hidden]{display:none!important}
+.panel:has(> .pager)>.btns:not(:first-child),.panel:has(> .pager)>.gobar{order:9}
+.pager{order:10;flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:6px;border-top:1px solid var(--line)}
+.pager button{padding:7px 14px;font-size:.85rem}
+.pager span{font-size:.8rem;color:var(--muted);font-family:var(--f-mono)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -476,6 +535,7 @@ body[data-view="measure"] .preview .mini{display:none}
       <div class="enh" id="enh" hidden>Contre-jour corrigé</div>
       <button class="cam-size" id="camSize" aria-label="Agrandir ou réduire l'image"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="camSizeP" d="M6 15l6-6 6 6"/></svg></button>
     </div>
+    <aside class="side" id="side"></aside>
     <section class="panel" id="panel" aria-live="polite"></section>
   </div>
   <details>
@@ -705,7 +765,116 @@ function go(view){
   render[view]();
   sizeStage();
   try{ renderPomo(); }catch(e){}
+  fitView(true);
 }
+/* ================= Tout sur un seul écran =================
+   1) on compacte par paliers ; 2) les Réglages passent en rubriques ; 3) sinon, le contenu est
+   découpé en pages (boutons Précédent / Suivant) : la page ne défile jamais. */
+function fitView(fresh){
+  const p = $("#panel"), side = $("#side"); if(!p) return;
+  const B = document.body, tb = document.querySelector(".tabbar"), wide = innerWidth >= 900 && S.view !== "measure";
+  if(tb) document.documentElement.style.setProperty("--tabH", tb.offsetHeight + "px");
+  if(fresh) p.dataset.page = "0";
+  // 0) remise à zéro : chaque bloc déplacé sous la caméra revient à sa place
+  if(side){
+    [...side.children].forEach(el => { const ph = el._fitPh; if(ph && ph.isConnected) ph.replaceWith(el); else el.remove(); });
+    side.innerHTML = "";
+  }
+  B.classList.remove("fit1", "fit2", "fit3"); p.classList.remove("lastresort");
+  p.querySelectorAll("[data-fit-hidden]").forEach(el => el.removeAttribute("data-fit-hidden"));
+  p.querySelectorAll(":scope > .pager").forEach(el => el.remove());
+  if(S.view === "settings") settingsTabs(p);
+  const over = () => p.scrollHeight > p.clientHeight + 1;
+  const toSide = el => { const ph = document.createElement("i"); ph.hidden = true; ph.className = "fit-ph"; el.replaceWith(ph); el._fitPh = ph; side.appendChild(el); };
+  const back = el => { el._fitPh.replaceWith(el); };
+  const pinned = el => el.matches(".btns, .gobar, .subtabs, .pager, h2, #back, .fit-ph");
+  // 1) grand écran : les détails (14 mesures…) vont sous la caméra
+  if(wide && side) p.querySelectorAll(":scope > details").forEach(toSide);
+  // 2) compactage par paliers
+  for(const c of ["fit1", "fit2", "fit3"]){ if(!over()) break; B.classList.add(c); }
+  // 3) grand écran : on remplit la colonne de gauche avec les plus gros blocs, tant qu'il y a la place
+  if(wide && side && over()){
+    const cands = [...p.children].filter((el, i) => i > 0 && !pinned(el) && !el.hidden && getComputedStyle(el).display !== "none")
+      .sort((x, y) => y.getBoundingClientRect().height - x.getBoundingClientRect().height);
+    for(const el of cands){
+      if(!over()) break;
+      toSide(el);
+      if(side.scrollHeight > side.clientHeight + 1){ back(el); }
+    }
+  }
+  if(side && side.scrollHeight > side.clientHeight + 1) side.querySelectorAll(".note").forEach(n => n.style.display = "none");
+  if(!over()) return;
+  // 4) dernier recours : des pages (Précédent / Suivant). Les boutons d'action restent visibles.
+  const kids = [...p.children].filter(el => !pinned(el) && !el.hidden && getComputedStyle(el).display !== "none");
+  if(kids.length < 2){ p.classList.add("lastresort"); return; }
+  const cs = getComputedStyle(p), gap = parseFloat(cs.rowGap) || 10;
+  const fixedH = [...p.children].filter(el => pinned(el) && !el.hidden && getComputedStyle(el).display !== "none").reduce((a, el) => a + el.getBoundingClientRect().height + gap, 0);
+  const avail = p.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - fixedH - 50;
+  // Unités de page : un bloc entier, ou, s'il est trop grand, ses lignes une par une
+  const units = [], split = [];
+  kids.forEach(el => {
+    const hh = el.getBoundingClientRect().height;
+    if(hh > avail && el.children.length >= 2){
+      split.push(el);
+      const rows = new Map();
+      [...el.children].forEach(c => { const r = c.getBoundingClientRect(); if(!r.height) return; const k = Math.round(r.top); const u = rows.get(k) || {els:[], h:0}; u.els.push(c); u.h = Math.max(u.h, r.height); rows.set(k, u); });
+      const rg = parseFloat(getComputedStyle(el).rowGap) || 0;
+      [...rows.values()].forEach((u, i) => units.push({els:u.els, h:u.h + rg - gap + (i === 0 ? 24 : 0)}));
+    } else units.push({els:[el], h:hh});
+  });
+  // Un titre reste avec ce qui le suit
+  for(let i = units.length - 2; i >= 0; i--){
+    const u = units[i];
+    if(u.els.length === 1 && (u.els[0].matches("h3, h4, .sec-title") || (u.els[0].childElementCount === 0 && u.h < 34))){ units[i + 1] = {els:[...u.els, ...units[i + 1].els], h:u.h + gap + units[i + 1].h}; units.splice(i, 1); }
+  }
+  const pages = []; let cur = [], used = 0;
+  units.forEach(u => {
+    const hh = u.h + gap;
+    if(cur.length && used + hh > avail){ pages.push(cur); cur = []; used = 0; }
+    cur.push(...u.els); used += hh;
+  });
+  if(cur.length) pages.push(cur);
+  if(pages.length < 2){ p.classList.add("lastresort"); return; }
+  let n = Math.min(+p.dataset.page || 0, pages.length - 1);
+  const pager = document.createElement("div"); pager.className = "pager";
+  pager.innerHTML = `<button class="pv">‹ Précédent</button><span></span><button class="nx">Suivant ›</button>`;
+  const show = i => {
+    n = i; p.dataset.page = String(i);
+    pages.forEach((pg, j) => pg.forEach(el => j === i ? el.removeAttribute("data-fit-hidden") : el.setAttribute("data-fit-hidden", "")));
+    split.forEach(el => [...el.children].every(c => c.hasAttribute("data-fit-hidden")) ? el.setAttribute("data-fit-hidden", "") : el.removeAttribute("data-fit-hidden"));
+    pager.querySelector(".pv").disabled = i === 0; pager.querySelector(".nx").disabled = i === pages.length - 1;
+    pager.querySelector("span").textContent = `${i + 1} / ${pages.length}`;
+    p.classList.toggle("lastresort", over());
+  };
+  pager.querySelector(".pv").onclick = () => show(Math.max(0, n - 1));
+  pager.querySelector(".nx").onclick = () => show(Math.min(pages.length - 1, n + 1));
+  p.appendChild(pager); show(n);
+}
+// Réglages : une rubrique à la fois
+function settingsTabs(p){
+  if(!p.querySelector("#srcSec")){
+    const src = document.querySelector(".wrap>details");
+    if(src){ const sec = document.createElement("section"); sec.className = "set"; sec.id = "srcSec"; sec.innerHTML = `<h3>Sources des conseils</h3>${src.querySelector(".tablewrap")?.outerHTML || ""}${src.querySelector(".note")?.outerHTML || ""}`; p.appendChild(sec); }
+  }
+  const secs = [...p.querySelectorAll(":scope > section.set")]; if(secs.length < 2) return;
+  let bar = p.querySelector(":scope > .subtabs");
+  if(!bar){
+    bar = document.createElement("div"); bar.className = "subtabs";
+    secs.forEach((s, i) => { const b = document.createElement("button"); b.textContent = s.querySelector("h3")?.textContent || `Rubrique ${i+1}`; b.dataset.i = i; bar.appendChild(b); });
+    const h2 = p.querySelector(":scope > h2"); (h2 || p.firstChild)?.after ? (h2 ? h2.after(bar) : p.prepend(bar)) : p.prepend(bar);
+    bar.onclick = e => { const b = e.target.closest("button"); if(!b) return; S.setTab = +b.dataset.i; fitView(true); };
+  }
+  const k = Math.min(S.setTab || 0, secs.length - 1);
+  secs.forEach((s, i) => { s.style.display = i !== k ? "none" : ""; const h = s.querySelector("h3"); if(h) h.style.display = "none"; });
+  bar.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === k));
+}
+window.addEventListener("resize", () => { clearTimeout(fitView.t); fitView.t = setTimeout(() => fitView(false), 120); });
+// Contenu du panneau remplacé sans changer d'écran (ex. un réglage modifié) : on réajuste
+{ const own = n => n.nodeType === 1 && (n.classList.contains("pager") || n.classList.contains("subtabs") || n.id === "srcSec" || n.classList.contains("fit-ph") || !!n._fitPh);
+  new MutationObserver(ms => { if(ms.some(m => [...m.addedNodes, ...m.removedNodes].some(n => !own(n)))){ clearTimeout(fitView.m); fitView.m = setTimeout(() => fitView(false), 30); } })
+    .observe(document.getElementById("panel"), {childList:true}); }
+// Si le contenu grandit (message qui apparaît, bilan qui se remplit…), on réajuste
+setInterval(() => { const p = $("#panel"); if(p && !p.querySelector(":scope > .pager") && !p.classList.contains("lastresort") && p.scrollHeight > p.clientHeight + 1) fitView(false); }, 1500);
 function sizeStage(){
   const auto = S.view !== "measure";
   const mini = S.view === "measure" ? false : (S.prefs.camMini ?? auto);
