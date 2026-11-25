@@ -280,6 +280,7 @@ body.compact .tool .tl{font-size:.62rem}
 .qa{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .qa button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;font-size:.8rem;line-height:1.15;text-align:center}
 .qa svg{width:22px;height:22px;color:var(--accent)}
+.qa button.on{background:color-mix(in srgb,var(--accent) 14%,transparent);border-color:var(--accent)}
 body.compact .qa button{padding:7px 4px;font-size:.72rem} body.compact .qa svg{width:18px;height:18px}
 /* Encouragements */
 .cheer{display:flex;align-items:center;gap:8px;font-size:.88rem;color:var(--muted)}
@@ -1041,14 +1042,14 @@ const render = {
       </div>
       <div class="bar"><i id="pbar"></i></div>
       <div class="cheer" id="cheer"></div>
-      <div class="qa"><button id="qExo">${ico("i-stretch")}Exercices nuque</button><button id="pip">${ico("i-pip")}Pastille flottante</button><button id="qPomo">${ico("i-timer")}Pomodoro</button><button id="goSet">${ico("i-sound")}Son, voix, réglages</button></div>
+      <div class="qa"><button id="qExo">${ico("i-stretch")}Exercices nuque</button><button id="pip">${ico("i-pip")}Pastille flottante</button><button id="qPomo">${ico("i-timer")}Pomodoro</button><button id="qQuiet" class="${S.prefs.quiet ? "on" : ""}" aria-pressed="${!!S.prefs.quiet}">${ico("i-sound")}${S.prefs.quiet ? "Silencieux : oui" : "Silencieux : non"}</button></div>
       <details open><summary>Tout ce que je mesure (14 points)</summary><div class="mon" id="mon"></div><p class="note" style="margin-top:8px">Comparé à votre position assis droit pendant la mesure. Vert : bien · orange : à surveiller · rouge : à corriger.</p></details>
       ${r ? `<div class="pill ${r.dir ? "warn" : "good"}">${ico(r.dir>0?"i-up":r.dir<0?"i-down":"i-check")}<span class="grow" id="scrTxt">Écran : <b>${r.dir ? r.title : "bien placé"}</b> <span class="muted">(dernière mesure)</span></span><button class="link" id="recal">Remesurer</button></div>` : ""}
       ${b && b.ev0 == null ? `<div class="pill warn">${ico("i-alert")}<span class="grow">Refaites une mesure pour activer les nouvelles détections (tête sur le côté, enfoncé dans le siège).</span><button class="link" id="recal2">Mesurer</button></div>` : ""}
       <div id="wake"></div>
       <p class="note">Le suivi continue si cette fenêtre est derrière vos autres applis. Ne la réduisez pas dans le Dock.</p>
       <button class="link" id="stopW">Arrêter le suivi</button>`;
-    $("#goSet").onclick = ()=>go("settings");
+    $("#qQuiet").onclick = ()=>{ S.prefs.quiet = !S.prefs.quiet; savePrefs(); const q = $("#qQuiet"); q.classList.toggle("on", S.prefs.quiet); q.setAttribute("aria-pressed", S.prefs.quiet); q.lastChild.textContent = S.prefs.quiet ? "Silencieux : oui" : "Silencieux : non"; toast(S.prefs.quiet ? "Mode open space : plus aucun son, la pastille clignote à la place" : "Sons réactivés", 3000); };
     const rc = $("#recal"); if(rc) rc.onclick = ()=>go("measure");
     const rc2 = $("#recal2"); if(rc2) rc2.onclick = ()=>go("measure");
     renderWake();
@@ -1466,6 +1467,7 @@ function speakNow(t, voice){
 }
 function say(t, on = G?.voice){
   if(!on || !window.speechSynthesis) return;
+  if(S.prefs.quiet && !S._preview && !G) return;
   if(hasNatural() || say.ready) return speakNow(t);
   let done = false; const f = ()=>{ if(done) return; done = true; say.ready = true; speakNow(t); };
   try{ speechSynthesis.addEventListener("voiceschanged", ()=>{ if(hasNatural()) f(); }); }catch(e){}
@@ -1619,6 +1621,7 @@ function gaugeSVG(top, D, h, r){
 /* ================= Suivi ================= */
 function startWatch(){
   const b = curBase(); if(!b) return go("prep");
+  if(!NATIVE && !pipDoc && !document.pictureInPictureElement && navigator.userActivation?.isActive) openPip().catch(()=>{});
   S.flip = 1;
   S.ema = {dist:b.dist, flex:0, neck:b.neck, tilt:b.tilt, shY:b.shY, eaY:b.eaY, ev:b.ev0 ?? null, roll:b.roll0 ?? 0, yaw:b.yaw0 ?? 0, ratio:b.ratio0 ?? null, lean:b.lean0 ?? null, twist:b.twist0 ?? null, squint:0, hand:0};
   S.watch = {start:Date.now(), blinks:[], eyeClosed:false, present:0, good:0, issueSince:0, lastAlert:0, lastTickAt:Date.now(), sinceBreak:0, breakDue:false, absentSince:0, absentCounted:false};
@@ -2401,6 +2404,7 @@ function renderSettings(){
     </section>
     <section class="set"><h3>Alertes</h3>
       <div class="srow"><label for="delay">Prévenir après</label><select id="delay"><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option></select></div>
+      <label class="check"><input type="checkbox" id="quiet" ${P.quiet ? "checked" : ""}>Mode open space : aucun son ni voix, la pastille clignote à la place</label>
       <label class="check"><input type="checkbox" id="insist" ${P.insist === false ? "" : "checked"}>Alerte qui insiste : si la mauvaise posture dure, la pastille clignote en rouge (après 30 s de plus), puis la fenêtre de l'app se floute jusqu'à ce que vous vous redressiez (après 1 min).</label>
       ${NATIVE ? "" : `<div class="btns"><button id="notif2">Activer les notifications</button></div>`}
       <p class="note">Une mauvaise posture s'affiche tout de suite ; le son et la notification attendent ce délai. Ensuite, 2 minutes minimum entre deux alertes. Bilan à 12 h 30 et 17 h 30.</p>
@@ -2426,12 +2430,13 @@ function renderSettings(){
   panel.querySelectorAll(".segb").forEach(b=>b.onclick = ()=>{ P[b.dataset.k] = b.dataset.v; savePrefs(); applyTheme(); renderSettings(); });
   panel.querySelectorAll("[data-acc]").forEach(b=>b.onclick = ()=>{ P.accent = b.dataset.acc; savePrefs(); applyTheme(); renderSettings(); });
   panel.querySelectorAll("[data-snd]").forEach(b=>b.onclick = ()=>{ P.sound = b.dataset.snd; savePrefs(); playSound(P.sound); renderSettings(); });
-  panel.querySelectorAll("[data-play]").forEach(b=>b.onclick = ()=>playSound(b.dataset.play));
+  panel.querySelectorAll("[data-play]").forEach(b=>b.onclick = ()=>{ S._preview = true; try{ playSound(b.dataset.play); } finally { S._preview = false; } });
   $("#vol").oninput = e=>{ P.volume = +e.target.value; savePrefs(); };
   $("#vol").onchange = ()=>playSound(P.sound === "aucun" ? "carillon" : P.sound);
   const vsel = $("#voiceSel"); if(vsel) vsel.onchange = e=>{ P.voiceName = e.target.value; savePrefs(); say("Tête penchée sur le côté. Yeux à l'horizontale.", true); };
-  const vt = $("#voiceTest"); if(vt) vt.onclick = ()=>say("Redressez-vous. Dos contre le dossier.", true);
+  const vt = $("#voiceTest"); if(vt) vt.onclick = ()=>{ S._preview = true; try{ say("Redressez-vous. Dos contre le dossier.", true); } finally { S._preview = false; } };
   $("#insist").onchange = e=>{ P.insist = e.target.checked; savePrefs(); };
+  $("#quiet").onchange = e=>{ P.quiet = e.target.checked; savePrefs(); };
   $("#goal").onchange = e=>{ P.goal = +e.target.value; savePrefs(); };
   $("#cheerOn").onchange = e=>{ P.cheer = e.target.checked; savePrefs(); };
   [["#pw","pomoW"],["#pb","pomoB"],["#pl","pomoL"]].forEach(([id,k])=>$(id).onchange = e=>{ P[k] = +e.target.value; savePrefs(); if(POMO.phase !== "idle" && !POMO.end){ POMO.left = null; } renderPomo(); });
@@ -2483,6 +2488,7 @@ function tone(f, at, dur, {type="sine", vol=1, to=null}={}){
 }
 function playSound(name = S.prefs.sound, issue = {t:"Redressez-vous", a:"Dos contre le dossier"}){
   if(name === "aucun") return;
+  if(S.prefs.quiet && !S._preview) return;   // mode open space : alertes visuelles seulement
   if(name === "voix"){ say(`${issue.t}. ${issue.a}.`, true); return; }
   unlockAudio(); if(!S.audio) return;
   try{
@@ -2494,7 +2500,7 @@ function playSound(name = S.prefs.sound, issue = {t:"Redressez-vous", a:"Dos con
   }catch(e){}
 }
 function notify(title, body){ try{ if(window.Notification && Notification.permission==="granted") new Notification(title, {body, silent:true, tag:"nuque"}); }catch(e){} }
-function alertUser(x){ if(snoozed()) return; playSound(S.prefs.sound, x); document.title = "⚠ " + x.t; notify(x.t, x.a ? `${x.a}. ${x.s}` : x.s); }
+function alertUser(x){ if(snoozed()) return; if(S.watch) S.watch.flashUntil = Date.now() + 8000; playSound(S.prefs.sound, x); document.title = "⚠ " + x.t; notify(x.t, x.a ? `${x.a}. ${x.s}` : x.s); }
 let pipCanvas = null, pipVideo = null, pipDoc = null;
 // Ouverture automatique de la mini-fenêtre quand on change d'onglet (Chrome/Edge sur ordinateur :
 // autorisé sans clic parce que l'app utilise la caméra). Elle se referme seule quand on revient sur l'onglet.
@@ -2534,7 +2540,9 @@ async function openPip(){
 }
 function updatePip(cls, title, action){
   const pt = pomoPipTxt(); if(pt) action = pt + " · " + action;
-  if(NATIVE){ try{ NATIVE.pill({cls, title, action, insist:(S.watch?.nag || 0) >= 2}); }catch(e){} return; }
+  const flash = (S.watch?.nag || 0) >= 2 || Date.now() < (S.watch?.flashUntil || 0);
+  if(pipDoc) pipDoc.body.classList.toggle("insist", flash);
+  if(NATIVE){ try{ NATIVE.pill({cls, title, action, insist:flash}); }catch(e){} return; }
   const col = {good:"#2FA867", warn:"#D99520", bad:"#E2582A"}[cls] || "#556";
   if(pipDoc){
     const d = pipDoc.getElementById("d"), t = pipDoc.getElementById("t"), a = pipDoc.getElementById("a");
@@ -2543,7 +2551,7 @@ function updatePip(cls, title, action){
   }
   if(!pipCanvas) return;
   const x = pipCanvas.getContext("2d");
-  x.fillStyle = (S.watch?.nag || 0) >= 2 ? (Date.now() % 1200 < 600 ? "#8E2A12" : "#C2401F") : "#0E1514"; x.fillRect(0,0,300,64);
+  x.fillStyle = ((S.watch?.nag || 0) >= 2 || Date.now() < (S.watch?.flashUntil || 0)) ? (Date.now() % 1200 < 600 ? "#8E2A12" : "#C2401F") : "#0E1514"; x.fillRect(0,0,300,64);
   x.fillStyle = col; x.beginPath(); x.arc(22,32,8,0,7); x.fill();
   x.fillStyle = "#F1F6F4"; x.font = "700 15px -apple-system, system-ui, sans-serif"; x.fillText(title.slice(0,30), 40, 27);
   x.fillStyle = "#9FB4AE"; x.font = "14px -apple-system, system-ui, sans-serif"; x.fillText(("→ " + action).slice(0,34), 40, 47);
