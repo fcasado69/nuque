@@ -58,18 +58,57 @@ function loadApp() {
 function showWin() { if (!win) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
 
 /* ---------- pastille toujours au premier plan ---------- */
-function createPill() {
+function defaultPillPos() {
   const wa = screen.getPrimaryDisplay().workArea;
-  const p = cfg.pillPos || { x: wa.x + wa.width - 316, y: wa.y + wa.height - 80 };
+  return { x: wa.x + wa.width - 316, y: wa.y + wa.height - 80 };
+}
+// Garde la pastille entièrement visible sur l'écran le plus proche
+function clampPill(x, y) {
+  const W = 300, H = 64;
+  const wa = screen.getDisplayNearestPoint({ x: x + W / 2, y: y + H / 2 }).workArea;
+  return {
+    x: Math.round(Math.min(Math.max(x, wa.x), wa.x + wa.width - W)),
+    y: Math.round(Math.min(Math.max(y, wa.y), wa.y + wa.height - H))
+  };
+}
+function savePillPos() { if (!pill) return; const b = pill.getBounds(); cfg.pillPos = { x: b.x, y: b.y }; writeCfg(cfg); }
+function resetPill() {
+  if (!pill) return;
+  const p = defaultPillPos(); pill.setPosition(p.x, p.y); savePillPos();
+  if (!pillWanted) setPillVisible(true); else pill.showInactive();
+}
+// Déplacement fait par l'app elle-même : fiable même si la fenêtre ne prend pas le focus
+let pillDrag = null;
+function pillDragStop() {
+  if (!pillDrag) return;
+  clearInterval(pillDrag.timer); pillDrag = null;
+  const b = pill.getBounds(), c = clampPill(b.x, b.y);
+  if (c.x !== b.x || c.y !== b.y) pill.setPosition(c.x, c.y);
+  savePillPos();
+}
+function pillDragStart() {
+  if (!pill) return;
+  pillDragStop();
+  const cur = screen.getCursorScreenPoint(), b = pill.getBounds();
+  const off = { x: cur.x - b.x, y: cur.y - b.y };
+  pillDrag = { timer: setInterval(() => {
+    const c = screen.getCursorScreenPoint();
+    pill.setPosition(c.x - off.x, c.y - off.y);
+  }, 12) };
+  setTimeout(() => { if (pillDrag) pillDragStop(); }, 30000); // filet de sécurité
+}
+
+function createPill() {
+  const p = cfg.pillPos ? clampPill(cfg.pillPos.x, cfg.pillPos.y) : defaultPillPos();
   pill = new BrowserWindow({
     width: 300, height: 64, x: p.x, y: p.y, frame: false, transparent: true, resizable: false, movable: true,
-    alwaysOnTop: true, skipTaskbar: true, focusable: false, hasShadow: true, show: false, fullscreenable: false,
+    alwaysOnTop: true, skipTaskbar: true, focusable: false, acceptFirstMouse: true, hasShadow: true, show: false, fullscreenable: false,
     webPreferences: { preload: path.join(__dirname, "pill-preload.js") }
   });
   pill.setAlwaysOnTop(true, "floating");
   pill.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   pill.loadFile(path.join(__dirname, "pill.html"));
-  pill.on("moved", () => { cfg.pillPos = { x: pill.getBounds().x, y: pill.getBounds().y }; writeCfg(cfg); });
+  pill.on("moved", () => { if (!pillDrag) savePillPos(); });
   pill.webContents.on("did-finish-load", () => { if (lastPill) pill.webContents.send("state", lastPill); });
 }
 function setPillVisible(on) {
@@ -120,6 +159,7 @@ function buildTrayMenu() {
     { label: "Exercices nuque (2 min)", click: () => { showWin(); win.webContents.send("cmd", { cmd: "exo" }); } },
     { type: "separator" },
     { label: "Pastille flottante", type: "checkbox", checked: pillWanted, click: m => setPillVisible(m.checked) },
+    { label: "Replacer la pastille en bas à droite", click: resetPill },
     paused
       ? { label: "Réactiver les alertes", click: () => snooze(0) }
       : { label: "Pause des alertes", submenu: [
@@ -156,7 +196,8 @@ ipcMain.handle("login-get", () => app.getLoginItemSettings().openAtLogin);
 ipcMain.handle("login-set", (e, on) => { setLogin(!!on); return on; });
 ipcMain.on("pill-open", showWin);
 ipcMain.on("pill-hide", () => setPillVisible(false));
-ipcMain.on("overlay-snooze", (e, ms) => snooze(ms));
+ipcMain.on("pill-drag-start", pillDragStart);
+ipcMain.on("pill-drag-stop", pillDragStop);ipcMain.on("overlay-snooze", (e, ms) => snooze(ms));
 
 /* ---------- démarrage ---------- */
 app.on("second-instance", showWin);
@@ -187,4 +228,10 @@ app.whenReady().then(async () => {
 
   createWin();
   createPill();
+  // Si un écran est débranché, on ramène la pastille sur un écran visible
+  screen.on("display-removed", () => {
+    if (!pill) return;
+    const b = pill.getBounds(), c = clampPill(b.x, b.y);
+    pill.setPosition(c.x, c.y); savePillPos();
+  });
 });

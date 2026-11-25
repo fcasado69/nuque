@@ -2,8 +2,11 @@
 <html lang="fr"><head><meta charset="utf-8"><title>Nuque Droite</title>
 <style>
   html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
-  .p{position:absolute;inset:2px;display:flex;align-items:center;gap:10px;padding:0 8px 0 12px;border-radius:14px;
-     background:#0E1514;color:#F1F6F4;box-shadow:0 4px 16px rgba(0,0,0,.35);-webkit-app-region:drag;cursor:move}
+  .p{position:absolute;inset:2px;display:flex;align-items:center;gap:10px;padding:0 8px 0 4px;border-radius:14px;
+     background:#0E1514;color:#F1F6F4;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
+  .p.dragging{cursor:grabbing;outline:2px solid #2FA867}
+  .grip{flex:none;width:14px;height:36px;border-radius:6px;display:grid;place-items:center;color:#5E726C;font-size:14px;letter-spacing:-2px;line-height:1}
+  .p:hover .grip{color:#9FB4AE;background:rgba(255,255,255,.06)}
   .p.insist{animation:pz 1.2s ease-in-out infinite}
   @keyframes pz{0%,100%{background:#8E2A12}50%{background:#E2582A}}
   #d{width:14px;height:14px;border-radius:50%;background:#556;flex:none}
@@ -12,11 +15,12 @@
   #a{font-size:12px;color:#9FB4AE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .p.insist #a{color:#fff}
   #a:not(:empty)::before{content:"→ "}
-  .b{-webkit-app-region:no-drag;border:0;background:none;color:#9FB4AE;font-size:15px;cursor:pointer;padding:4px 5px;border-radius:6px;line-height:1}
+  .b{border:0;background:none;color:#9FB4AE;font-size:15px;cursor:pointer;padding:4px 5px;border-radius:6px;line-height:1}
   .b:hover{background:rgba(255,255,255,.12);color:#fff}
 </style></head>
 <body>
-  <div class="p" id="p">
+  <div class="p" id="p" title="Glisser pour déplacer">
+    <span class="grip" aria-hidden="true">⋮⋮</span>
     <span id="d"></span>
     <div class="txt"><div id="t">Nuque Droite</div><div id="a">Démarrage…</div></div>
     <button class="b" id="open" title="Ouvrir l'app">⤢</button>
@@ -32,5 +36,24 @@
   });
   document.getElementById("open").onclick = () => pillApi.open();
   document.getElementById("hide").onclick = () => pillApi.hide();
+
+  // Glisser-déposer : on attrape n'importe où sauf sur les boutons
+  const p = document.getElementById("p");
+  let dragging = false;
+  const stop = () => { if (!dragging) return; dragging = false; p.classList.remove("dragging"); pillApi.dragStop(); };
+  p.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || e.target.closest(".b")) return;
+    e.preventDefault();
+    dragging = true; p.classList.add("dragging");
+    try { p.setPointerCapture(e.pointerId); } catch {}
+    pillApi.dragStart();
+  });
+  p.addEventListener("pointermove", e => { if (dragging && e.buttons === 0) stop(); });
+  p.addEventListener("pointerup", stop);
+  p.addEventListener("pointercancel", stop);
+  p.addEventListener("lostpointercapture", stop);
+  window.addEventListener("blur", stop);
+  // Double-clic : ouvre l'app
+  p.addEventListener("dblclick", e => { if (!e.target.closest(".b")) pillApi.open(); });
 </script>
 </body></html>
