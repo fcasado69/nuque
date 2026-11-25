@@ -1541,10 +1541,14 @@ function watchTick(m){
     if(!W.absentSince) W.absentSince = now;
     // une absence de 3 minutes compte comme une pause
     if(now - W.absentSince > 180e3 && !W.absentCounted){ W.absentCounted = true; W.sinceBreak = 0; W.breakDue = false; hist().b++; const bx = $("#breakBox"); if(bx) bx.innerHTML = ""; }
-    W.issueSince = 0; nagTick(true, [], now); setBadge("", "Absent");
+    W.issueSince = 0; W.graceUntil = 0; nagTick(true, [], now); setBadge("", "Absent");
     if(live){ live.className = "hero"; $("#liveIco").setAttribute("href", "#i-face"); $("#lv").textContent = "En pause"; $("#lp").textContent = W.absentCounted ? "Pause comptée. Bon retour !" : "Personne devant l'écran."; }
+    // La pastille indique l'absence (au lieu de garder la dernière alerte de posture)
+    if(now - W.absentSince > 1500) updatePip("", "Absent", W.absentCounted ? "Pause comptée. Bon retour !" : "Personne devant l'écran");
     return;
   }
+  // Retour après une absence de plus de 10 s : on laisse 30 s pour se réinstaller
+  if(W.absentSince && now - W.absentSince > 10e3) W.graceUntil = now + 30e3;
   W.absentSince = 0; W.absentCounted = false;
   // Deux écrans : quand vous regardez l'écran du portable, votre tête est comparée à « regard sur le portable »,
   // pas à « regard sur l'écran principal ». Un coup d'œil au portable n'est donc pas une mauvaise posture.
@@ -1563,6 +1567,17 @@ function watchTick(m){
   if(m.squint != null && (W.sqS = W.sqS || []).length < 900) W.sqS.push([m.squint, m.blink ?? 0]);
   if(b.squint0 == null && W.sq0 == null && now - W.start > 120000 && W.sqS.length > 200){ W.sq0 = median(W.sqS.map(x=>x[0])); W.bl0 = median(W.sqS.map(x=>x[1])); }
   if(m.blink != null){ const closed = m.blink > Math.max(.45, (b.blink0 ?? W.bl0 ?? 0) + .3); if(W.eyeClosed && !closed) W.blinks.push(now); W.eyeClosed = closed; W.blinks = W.blinks.filter(t => now - t < 60000); }
+  // Fin d'une pause (alertes en pause, pause Pomodoro) : 30 s de réinstallation avant de reprendre les stats
+  const snz = snoozed(), brk = P0().phase === "break";
+  if((W.wasSnoozed && !snz) || (W.wasBreak && !brk)) W.graceUntil = now + 30e3;
+  W.wasSnoozed = snz; W.wasBreak = brk;
+  if(now < (W.graceUntil || 0)){
+    const left = Math.ceil((W.graceUntil - now)/1000);
+    W.issueSince = 0; nagTick(true, [], now); setBadge("", `Reprise dans ${left} s`);
+    if(live){ live.className = "hero"; $("#liveIco").setAttribute("href", "#i-timer"); $("#lv").textContent = `Reprise dans ${left} s`; $("#lp").textContent = "Installez-vous tranquillement : rien n'est compté pendant ce temps."; }
+    updatePip("", `Reprise dans ${left} s`, "Installez-vous tranquillement");
+    return;
+  }
   W.present += dt; W.sinceBreak += dt;
   const all = issues(b), is = all.filter(x=>!x.eye), eyes = all.filter(x=>x.eye);
   updateLiveScreen(b, m, !is.length, now);
