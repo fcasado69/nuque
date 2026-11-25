@@ -29,6 +29,13 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
+.recadre{max-width:420px;width:calc(100% - 32px);border:1px solid var(--line);border-radius:18px;padding:24px;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.recadre::backdrop{background:rgba(8,14,13,.55)}
+.recadre h2{margin:10px 0 6px;font-size:1.2rem}
+.recadre p{margin:0 0 10px;line-height:1.45}
+.rcIco{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);color:var(--accent)}
+.rcIco svg{width:24px;height:24px}
+.rcB{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 body{font-family:var(--f-body);font-size:.9375rem;line-height:1.5;margin:0;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
@@ -418,6 +425,17 @@ body[data-view="measure"] .preview .mini{display:none}
   </defs>
 </svg>
 
+<dialog id="recadre" class="recadre" aria-labelledby="rcT">
+  <div class="rcIco"><svg><use href="#i-screen"/></svg></div>
+  <h2 id="rcT">L'écran ou la caméra a bougé ?</h2>
+  <p id="rcP"></p>
+  <p class="note">Si vous avez déplacé l'écran, l'ordinateur ou la caméra, refaites la mesure : 30 secondes, assis bien droit. Sinon, c'est que votre posture a vraiment changé.</p>
+  <div class="rcB">
+    <button class="primary" id="rcGo">Recadrer maintenant</button>
+    <button id="rcNo">Non, rien n'a bougé</button>
+    <button class="link" id="rcLater">Plus tard</button>
+  </div>
+</dialog>
 <div class="toast" id="toast" hidden role="status"></div>
 <nav class="tabbar" aria-label="Navigation"><div class="in">
   <button data-tab="suivi" id="tabSuivi"><svg><use href="#i-check"/></svg>Suivi</button>
@@ -1586,6 +1604,7 @@ function watchTick(m){
   recordHist(dt, ok);
   { const h = hist(); h.kg = (h.kg || 0) + neckKg(S.ema.flex)*dt; h.kgT = (h.kgT || 0) + dt; if(!ok){ const k = is[0].k; (h.iss || (h.iss = {}))[k] = (h.iss[k] || 0) + dt; } }
   cheerTick(ok, is, now, dt);
+  reframeTick(b, is, now);
   const cls = ok ? "good" : (is.length > 1 ? "bad" : "warn");
   setBadge(cls, ok ? "Bonne posture" : is[0].t);
   if(live){
@@ -1663,6 +1682,54 @@ function neckKg(a){
   for(let i=1;i<NECK_KG.length;i++){ const [a1,k1] = NECK_KG[i-1], [a2,k2] = NECK_KG[i]; if(a <= a2) return k1 + (k2-k1)*(a-a1)/(a2-a1); }
   return 27;
 }
+
+/* ================= Proposer de recadrer quand l'écran ou la caméra a bougé =================
+   Signe typique : le même « défaut » est vu presque en continu pendant plusieurs minutes, avec une valeur
+   quasi figée. Une vraie mauvaise posture bouge ; un repère décalé (écran tourné, caméra déplacée) ne bouge pas. */
+const RC_KEYS = {           // défaut → [mesure, variation max pour être « figé »]
+  flex:  [x => x.flex, 4],   ext: [x => x.flex, 4],
+  yaw:   [x => x.yaw, 4],    roll: [x => x.roll, 3],
+  twist: [x => x.twist, 4],  tilt: [x => x.tilt, 2],
+  lean:  [x => x.lean, .05], close: [x => x.distRatio, .05]
+};
+const RC_WIN = 240e3, RC_MIN = 180;   // 4 min de présence observées, au moins 180 relevés
+function reframeTick(b, is, now){
+  const W = S.watch; if(!W) return;
+  if(now - (W.rcLastS || 0) < 1000) return; W.rcLastS = now;   // 1 relevé par seconde
+  const x = metrics(b), k = is[0]?.k;
+  (W.rcS = W.rcS || []).push({t:now, k: RC_KEYS[k] ? k : (k ? "other" : "ok"), v: RC_KEYS[k] ? RC_KEYS[k][0](x) : null});
+  W.rcS = W.rcS.filter(s => now - s.t < RC_WIN);
+  if(now - (W.rcEval || 0) < 10e3) return; W.rcEval = now;
+  if(now - W.start < 180e3 || now < (S.rcMuteUntil || 0) || snoozed() || P0().phase === "break" || $("#recadre")?.open) return;
+  if(W.rcS.length < RC_MIN) return;
+  const cnt = {}; W.rcS.forEach(s => cnt[s.k] = (cnt[s.k] || 0) + 1);
+  const top = Object.keys(cnt).filter(c => RC_KEYS[c]).sort((a, c) => cnt[c] - cnt[a])[0];
+  if(!top || cnt[top] / W.rcS.length < .85) return;
+  const vs = W.rcS.filter(s => s.k === top && s.v != null).map(s => s.v);
+  const mean = vs.reduce((a, v) => a + v, 0) / vs.length;
+  const sd = Math.sqrt(vs.reduce((a, v) => a + (v - mean) ** 2, 0) / vs.length);
+  if(sd > RC_KEYS[top][1]) return;
+  showReframe(is.find(i => i.k === top) || is[0]);
+}
+function showReframe(it){
+  const d = $("#recadre"); if(!d || d.open) return;
+  $("#rcP").innerHTML = `Depuis 4 minutes, je vois <b>« ${it?.t || "un défaut de posture"} »</b> presque sans interruption, et la mesure ne varie quasiment pas. C'est souvent le signe que l'écran ou la caméra a été déplacé depuis le réglage.`;
+  if(S.watch){ S.watch.issueSince = 0; S.watch.nag = 0; }
+  try{ NATIVE?.blur(false); NATIVE?.show(); }catch(e){}
+  try{ window.focus(); }catch(e){}
+  notify("L'écran a bougé ?", "Ouvrez Nuque Droite pour recadrer en 30 secondes.");
+  if(S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say("L'écran ou la caméra a peut-être bougé. Voulez-vous recadrer ?", true); else playSound(S.prefs.sound); }
+  try{ d.showModal(); }catch(e){ d.setAttribute("open", ""); }
+}
+function closeReframe(muteMin){
+  const d = $("#recadre"); if(d?.open){ try{ d.close(); }catch(e){ d.removeAttribute("open"); } }
+  S.rcMuteUntil = Date.now() + muteMin * 60e3;
+  if(S.watch) S.watch.rcS = [];
+}
+$("#rcGo").onclick = ()=>{ closeReframe(30); try{ S.series[currentScreen().key] = []; store.set("nd5_series", S.series); }catch(e){} go("measure"); };
+$("#rcNo").onclick = ()=>{ closeReframe(60); toast("D'accord. Je ne vous le redemande pas avant 1 heure.", 3000); };
+$("#rcLater").onclick = ()=> closeReframe(15);
+$("#recadre").addEventListener("cancel", ()=>{ S.rcMuteUntil = Date.now() + 15*60e3; if(S.watch) S.watch.rcS = []; });
 
 /* ================= Alerte qui insiste ================= */
 function nagTick(ok, is, now){
