@@ -1663,6 +1663,7 @@ function screenIssue(){
   return {k:"screen", i: up ? "i-up" : "i-down", t: up ? "Écran trop bas" : "Écran trop haut", s: `${up ? "Montez" : "Baissez"} l'écran de ${r.cm} cm environ.`, a: `${up ? "Montez" : "Baissez"} l'écran de ${r.cm} cm`, v: `${r.cm} cm`};
 }
 // Toutes les mesures, comparées à votre position de référence (assis droit pendant la mesure)
+const A = Math.abs;
 function metrics(b){
   const e = S.ema, W = S.watch, dif = (v, v0) => v != null && v0 != null ? v - v0 : null;
   const sink = b.ev0 != null && b.fh0 && e.ev != null ? (e.ev - b.ev0)/b.fh0 : null;
@@ -1678,13 +1679,22 @@ function metrics(b){
     tilt: dif(e.tilt, b.tilt), shrug: neckDrop != null ? (shUp > headDown ? neckDrop : 0) : null,
     slumpNeck: neckDrop != null && shUp <= headDown ? neckDrop : 0,
     lean: dif(e.lean, b.lean0), twist: dif(e.twist, b.twist0),
+    // Décalage vertical de tout le haut du corps (cm, + = plus bas qu'au réglage) : siège baissé/monté ?
+    heightCm: sink != null ? sink*19 : (b.eaY != null && e.eaY != null ? (e.eaY - b.eaY)*38 : null),
+    sameShape: A(neckDrop ?? 0) < .08 && !(prot != null && prot > .05) && A(dif(e.flex, 0) ?? 0) < 12,
     dist: b.sDist * e.dist / b.dist, distRatio: e.dist/b.dist, blinkRate, squint: (b.squint0 ?? W?.sq0) != null && e.squint != null ? Math.max(0, e.squint - (b.squint0 ?? W.sq0)) : null, hand: e.hand
   };
 }
-const A = Math.abs;
 function issues(b){
   const x = metrics(b), out = [];
-  if((x.sink ?? 0) > .3 || x.slumpNeck > .15) out.push({k:"slouch", i:"i-slouch", t:"Redressez-vous", s:"Vous vous enfoncez dans le siège. Fesses au fond, dos contre le dossier.", a:"Fesses au fond, dos au dossier", v:x.sink != null ? `${Math.max(0, Math.round(x.sink*19))} cm plus bas` : ""});
+  const hc = x.heightCm;
+  if(hc != null && A(hc) >= 5 && x.sameShape){
+    const down = hc > 0, cm = Math.round(A(hc));
+    out.push({k:"seat", i:"i-slouch", t: down ? `${cm} cm plus bas qu'au réglage` : `${cm} cm plus haut qu'au réglage`,
+      s: `Vous avez ${down ? "baissé" : "monté"} votre siège ? La mesure de référence n'est plus valable : refaites-la.${down ? " Sinon, fesses au fond du siège, dos contre le dossier." : ""}`,
+      a: `Siège ${down ? "baissé" : "monté"} ? Refaites la mesure`, v:`${cm} cm`});
+  }
+  else if((x.sink ?? 0) > .3 || x.slumpNeck > .15) out.push({k:"slouch", i:"i-slouch", t:"Redressez-vous", s:"Vous vous enfoncez dans le siège. Fesses au fond, dos contre le dossier.", a:"Fesses au fond, dos au dossier", v:x.sink != null ? `${Math.max(0, Math.round(x.sink*19))} cm plus bas` : ""});
   if(x.hand > .6) out.push({k:"hand", i:"i-hand", t:"Main sous le menton", s:"Ne portez pas la tête avec la main : avant-bras posés.", a:"Posez les avant-bras", v:""});
   if((x.fwdHead ?? 0) > .08) out.push({k:"fwdhead", i:"i-forward", t:"Tête trop en avant", s:"Rentrez le menton, oreilles au-dessus des épaules.", a:"Rentrez le menton", v:`+${Math.round(x.fwdHead*100)} %`});
   if((x.rounded ?? 0) > .08) out.push({k:"round", i:"i-shoulders", t:"Épaules enroulées", s:"Ouvrez la poitrine, omoplates vers l'arrière.", a:"Omoplates vers l'arrière", v:`+${Math.round(x.rounded*100)} %`});
@@ -1770,13 +1780,14 @@ function watchTick(m){
   }
   W.present += dt; W.sinceBreak += dt;
   const all = issues(b), is = all.filter(x=>!x.eye), eyes = all.filter(x=>x.eye);
-  updateLiveScreen(b, m, !is.length, now);
+  updateLiveScreen(b, m, !is.length, now);   // (hauteur changée : la mesure de l'écran attend la nouvelle référence)
   const scrI = screenIssue(); if(scrI) is.push(scrI);
   const ok = !is.length; if(ok) W.good += dt;
   recordHist(dt, ok);
   { const h = hist(); h.kg = (h.kg || 0) + neckKg(S.ema.flex)*dt; h.kgT = (h.kgT || 0) + dt; if(!ok){ const k = is[0].k; (h.iss || (h.iss = {}))[k] = (h.iss[k] || 0) + dt; } }
   cheerTick(ok, is, now, dt);
   reframeTick(b, is, now);
+  seatTick(is, now);
   const cls = ok ? "good" : (is.length > 1 ? "bad" : "warn");
   setBadge(cls, ok ? "Bonne posture" : is[0].t);
   if(live){
@@ -1883,14 +1894,34 @@ function reframeTick(b, is, now){
   if(sd > RC_KEYS[top][1]) return;
   showReframe(is.find(i => i.k === top) || is[0]);
 }
-function showReframe(it){
+function seatTick(is, now){
+  const W = S.watch; if(!W) return;
+  const it = is.find(i => i.k === "seat");
+  if(!it){ W.seatSince = 0; return; }
+  W.seatSince = W.seatSince || now;
+  if(now - W.seatSince < 15e3 || now < (S.seatMuteUntil || 0) || snoozed() || P0().phase === "break" || $("#recadre")?.open) return;
+  showReframe(it, {
+    title: "Nouvelle hauteur de siège ?",
+    text: `Vous êtes assis <b>${it.v} ${it.t.includes("bas") ? "plus bas" : "plus haut"}</b> qu'au moment du réglage, depuis 15 secondes. Si vous avez changé la hauteur du siège, refaites la mesure pour que l'app reparte de votre nouvelle position et revérifie la hauteur de l'écran.`,
+    note: "Si vous vous êtes simplement enfoncé dans le siège, redressez-vous : fesses au fond, dos contre le dossier.",
+    seat: true
+  });
+}
+function showReframe(it, o = {}){
   const d = $("#recadre"); if(!d || d.open) return;
+  d.dataset.seat = o.seat ? "1" : "";
+  $("#rcT").textContent = o.title || "L'écran ou la caméra a bougé ?";
+  d.querySelector(".note").textContent = o.note || "Si vous avez déplacé l'écran, l'ordinateur ou la caméra, refaites la mesure : 30 secondes, assis bien droit. Sinon, c'est que votre posture a vraiment changé.";
+  $("#rcNo").textContent = o.seat ? "Non, je me redresse" : "Non, rien n'a bougé";
+  $("#rcGo").textContent = o.seat ? "Refaire la mesure" : "Recadrer maintenant";
+  if(o.text){ $("#rcP").innerHTML = o.text; } else
   $("#rcP").innerHTML = `Depuis 4 minutes, je vois <b>« ${it?.t || "un défaut de posture"} »</b> presque sans interruption, et la mesure ne varie quasiment pas. C'est souvent le signe que l'écran ou la caméra a été déplacé depuis le réglage.`;
   if(S.watch){ S.watch.issueSince = 0; S.watch.nag = 0; }
   try{ NATIVE?.blur(false); NATIVE?.show(); }catch(e){}
   try{ window.focus(); }catch(e){}
-  notify("L'écran a bougé ?", "Ouvrez Nuque Droite pour recadrer en 30 secondes.");
-  if(S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say("L'écran ou la caméra a peut-être bougé. Voulez-vous recadrer ?", true); else playSound(S.prefs.sound); }
+  notify(o.title || "L'écran a bougé ?", "Ouvrez Nuque Droite pour refaire la mesure en 30 secondes.");
+  if(S.watch) S.watch.flashUntil = Date.now() + 8000;
+  if(S.prefs.sound !== "aucun"){ if(S.prefs.sound === "voix") say(o.seat ? "Votre siège a changé de hauteur ? Refaites la mesure." : "L'écran ou la caméra a peut-être bougé. Voulez-vous recadrer ?", true); else playSound(S.prefs.sound); }
   try{ d.showModal(); }catch(e){ d.setAttribute("open", ""); }
 }
 function closeReframe(muteMin){
@@ -1899,9 +1930,9 @@ function closeReframe(muteMin){
   if(S.watch) S.watch.rcS = [];
 }
 $("#rcGo").onclick = ()=>{ closeReframe(30); try{ S.series[currentScreen().key] = []; store.set("nd5_series", S.series); }catch(e){} go("measure"); };
-$("#rcNo").onclick = ()=>{ closeReframe(60); toast("D'accord. Je ne vous le redemande pas avant 1 heure.", 3000); };
-$("#rcLater").onclick = ()=> closeReframe(15);
-$("#recadre").addEventListener("cancel", ()=>{ S.rcMuteUntil = Date.now() + 15*60e3; if(S.watch) S.watch.rcS = []; });
+$("#rcNo").onclick = ()=>{ if($("#recadre").dataset.seat){ const d = $("#recadre"); try{ d.close(); }catch(e){ d.removeAttribute("open"); } S.seatMuteUntil = Date.now() + 10*60e3; return; } closeReframe(60); toast("D'accord. Je ne vous le redemande pas avant 1 heure.", 3000); };
+$("#rcLater").onclick = ()=>{ if($("#recadre").dataset.seat){ const d = $("#recadre"); try{ d.close(); }catch(e){ d.removeAttribute("open"); } S.seatMuteUntil = Date.now() + 15*60e3; return; } closeReframe(15); };
+$("#recadre").addEventListener("cancel", ()=>{ if($("#recadre").dataset.seat){ S.seatMuteUntil = Date.now() + 15*60e3; return; } S.rcMuteUntil = Date.now() + 15*60e3; if(S.watch) S.watch.rcS = []; });
 
 /* ================= Alerte qui insiste ================= */
 function nagTick(ok, is, now){
